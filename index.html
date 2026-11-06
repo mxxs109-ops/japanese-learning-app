@@ -337,7 +337,7 @@
   }
 
   function allHTML() {
-    var reviewable = Q.filter(function (q) { var st = rec(q.id).status; return st === 'mastered' || st === 'graduated'; });
+    var reviewable = Q.filter(function (q) { return q.date <= TODAY; });
     var h = '<div class="card"><div class="head"><h3>题库 · ' + Q.length + '</h3>' +
       (reviewable.length ? '<button class="btn" data-act="free-done">复习</button>' : '') + '</div>';
     Q.slice().sort(function (a, b) { return a.date < b.date ? 1 : -1; }).forEach(function (q) {
@@ -353,6 +353,10 @@
   }
 
   // ---------- 操作 ----------
+  function shuffle(a) {
+    for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = a[i]; a[i] = a[j]; a[j] = t; }
+    return a;
+  }
   function startSession(ids, mode) {
     if (!ids.length) return;
     session = { queue: ids, idx: 0, mode: mode, answer: null, after: null, results: [] };
@@ -368,7 +372,7 @@
     else if (act === 'go-all') { view = 'all'; render(); }
     else if (act === 'free-one') startSession([t.dataset.id], 'free');
     else if (act === 'free-wrong') startSession(Q.filter(function (q) { return rec(q.id).status === 'learning'; }).map(function (q) { return q.id; }), 'free');
-    else if (act === 'free-done') startSession(Q.filter(function (q) { var s = rec(q.id).status; return s === 'mastered' || s === 'graduated'; }).map(function (q) { return q.id; }), 'free');
+    else if (act === 'free-done') startSession(shuffle(Q.filter(function (q) { return q.date <= TODAY; }).map(function (q) { return q.id; })), 'free');
     else if (act === 'pick' && session && session.answer == null) {
       var q = QMAP[session.queue[session.idx]], i = Number(t.dataset.i), ok = i === q.answer;
       // 今日练习里，只有"到期"的错题和新题按 daily 计；其他按手动复习计
