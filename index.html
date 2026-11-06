@@ -1,0 +1,389 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>日本語 Daily</title>
+<style>
+  :root {
+    --bg: #f6f5f2;
+    --card: #ffffff;
+    --ink: #1f1f1f;
+    --muted: #8a8780;
+    --line: #e7e4de;
+    --accent: #3d5afe;
+    --accent-soft: #eef0ff;
+    --ok: #1f9d6b;
+    --ok-soft: #e6f6ef;
+    --bad: #d6455d;
+    --bad-soft: #fcebee;
+    --n5: #4f6bed;
+    --n4: #e0607e;
+    --radius: 18px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #141414; --card: #1d1d1d; --ink: #ececec; --muted: #8f8f8f; --line: #2c2c2c;
+      --accent: #7b8cff; --accent-soft: #23263a;
+      --ok: #4cc493; --ok-soft: #17291f; --bad: #f0748a; --bad-soft: #321b20;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--ink); }
+  body {
+    font-family: "Hiragino Sans", "Noto Sans JP", "Yu Gothic UI", "Microsoft YaHei UI", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+  }
+  .wrap { max-width: 640px; margin: 0 auto; padding: 28px 16px 64px; }
+
+  header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 22px; }
+  .brand { font-size: 22px; font-weight: 700; letter-spacing: .02em; }
+  .brand span { color: var(--accent); }
+  .date { color: var(--muted); font-size: 13px; }
+
+  nav { display: flex; gap: 6px; background: var(--card); border: 1px solid var(--line);
+        border-radius: 999px; padding: 4px; margin-bottom: 22px; }
+  nav button { flex: 1; border: 0; background: transparent; color: var(--muted); font: inherit;
+               font-size: 14px; padding: 9px 0; border-radius: 999px; cursor: pointer; }
+  nav button.on { background: var(--ink); color: var(--bg); }
+  nav .badge { display: inline-block; min-width: 18px; padding: 0 5px; margin-left: 4px; border-radius: 9px;
+               font-size: 11px; line-height: 18px; background: var(--bad); color: #fff; }
+
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 24px; }
+  .card + .card { margin-top: 14px; }
+
+  /* 首页 */
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 14px; }
+  .stat { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px 10px; text-align: center; }
+  .stat b { display: block; font-size: 24px; font-weight: 700; }
+  .stat small { color: var(--muted); font-size: 12px; }
+  .hero { text-align: center; padding: 34px 24px; }
+  .hero h2 { margin: 0 0 6px; font-size: 20px; }
+  .hero p { margin: 0 0 22px; color: var(--muted); font-size: 14px; }
+  .btn { border: 0; font: inherit; cursor: pointer; border-radius: 999px; padding: 13px 28px; font-size: 15px;
+         background: var(--ink); color: var(--bg); transition: transform .1s, opacity .15s; }
+  .btn:active { transform: scale(.98); }
+  .btn.ghost { background: transparent; color: var(--ink); border: 1px solid var(--line); }
+  .btn.small { padding: 7px 14px; font-size: 13px; }
+  .btn[disabled] { opacity: .35; cursor: default; }
+  .rule { color: var(--muted); font-size: 13px; line-height: 1.8; }
+  .rule b { color: var(--ink); font-weight: 600; }
+  .foot { display: flex; gap: 8px; justify-content: center; margin-top: 18px; }
+
+  /* 答题 */
+  .qtop { display: flex; align-items: center; gap: 10px; margin-bottom: 18px; }
+  .lv { font-weight: 800; font-size: 13px; color: #fff; padding: 3px 9px; border-radius: 7px; }
+  .lv.N5 { background: var(--n5); } .lv.N4 { background: var(--n4); }
+  .lv.N3 { background: #e49b2a; } .lv.N2 { background: #27a37a; } .lv.N1 { background: #6b4fd8; }
+  .sec { font-size: 13px; color: var(--muted); }
+  .progress { margin-left: auto; font-size: 12px; color: var(--muted); }
+  .tag { font-size: 11px; padding: 2px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); }
+  .tag.bad { background: var(--bad-soft); color: var(--bad); }
+  .instr { font-size: 13px; color: var(--muted); line-height: 1.9; margin: 0 0 28px; }
+  .sentence { font-size: 26px; text-align: center; margin: 8px 0 34px; line-height: 1.7; }
+  .sentence u { text-decoration: none; border-bottom: 2px solid var(--ink); padding: 0 2px; }
+  .opts { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .opt { border: 1px solid var(--line); background: var(--card); color: var(--ink); font: inherit; font-size: 18px;
+         padding: 15px 14px; border-radius: 14px; cursor: pointer; text-align: left; display: flex; gap: 12px;
+         align-items: center; transition: border-color .15s, background .15s; }
+  .opt:hover:not([disabled]) { border-color: var(--ink); }
+  .opt .n { font-size: 13px; color: var(--muted); width: 22px; height: 22px; border-radius: 50%;
+            border: 1px solid var(--line); display: grid; place-items: center; flex: none; }
+  .opt[disabled] { cursor: default; }
+  .opt.ok { border-color: var(--ok); background: var(--ok-soft); }
+  .opt.ok .n { background: var(--ok); border-color: var(--ok); color: #fff; }
+  .opt.bad { border-color: var(--bad); background: var(--bad-soft); }
+  .opt.bad .n { background: var(--bad); border-color: var(--bad); color: #fff; }
+  .opt.dim { opacity: .45; }
+
+  .verdict { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 16px; margin-bottom: 4px; }
+  .verdict .dot { width: 10px; height: 10px; border-radius: 50%; }
+  .verdict.ok { color: var(--ok); } .verdict.ok .dot { background: var(--ok); }
+  .verdict.bad { color: var(--bad); } .verdict.bad .dot { background: var(--bad); }
+  .sched { font-size: 13px; color: var(--muted); margin-bottom: 14px; }
+  .expl { font-size: 14.5px; line-height: 1.9; border-top: 1px solid var(--line); padding-top: 14px; }
+  .expl p { margin: 0 0 8px; }
+  .expl ul { margin: 0 0 8px; padding-left: 20px; }
+  .next { display: flex; justify-content: flex-end; margin-top: 16px; }
+
+  /* 列表 */
+  .item { display: flex; align-items: center; gap: 12px; padding: 14px 0; border-bottom: 1px solid var(--line); }
+  .item:last-child { border-bottom: 0; }
+  .item .main { flex: 1; min-width: 0; }
+  .item .s { font-size: 16px; }
+  .item .s u { text-decoration: none; border-bottom: 1.5px solid var(--ink); }
+  .item .m { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .dots { display: inline-flex; gap: 3px; vertical-align: middle; margin-right: 6px; }
+  .dots i { width: 7px; height: 7px; border-radius: 50%; background: var(--line); }
+  .dots i.on { background: var(--ok); }
+  .empty { text-align: center; color: var(--muted); padding: 28px 0; font-size: 14px; }
+  .head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+  .head h3 { margin: 0; font-size: 16px; }
+  .test { background: #fff4d6; color: #7a5a00; font-size: 12px; padding: 8px 12px; border-radius: 10px; margin-bottom: 14px; }
+
+  @media (max-width: 480px) {
+    .stats { grid-template-columns: repeat(2, 1fr); }
+    .opts { grid-template-columns: 1fr; }
+    .sentence { font-size: 22px; }
+    .card { padding: 20px 18px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">日本語 <span>Daily</span></div>
+    <div class="date" id="date"></div>
+  </header>
+  <div id="testbar"></div>
+  <nav id="nav">
+    <button data-v="home">今日</button>
+    <button data-v="wrong">错题集</button>
+    <button data-v="all">题库</button>
+  </nav>
+  <main id="view"></main>
+</div>
+
+<script src="questions.js"></script>
+<script src="srs.js"></script>
+<script>
+(function () {
+  'use strict';
+  var STORE_KEY = 'jp-daily-v1';
+  var Q = window.QUESTIONS;
+  var QMAP = {}; Q.forEach(function (q) { QMAP[q.id] = q; });
+
+  // ?today=2026-11-20 可模拟日期，用来测试复习排期
+  var params = new URLSearchParams(location.search);
+  var TODAY = /^\d{4}-\d{2}-\d{2}$/.test(params.get('today') || '') ? params.get('today') : SRS.todayStr();
+
+  var state = load();
+  // 补录微信里已做过的题：每条只写入一次（会覆盖写入前的记录），写过之后不再动
+  state.pastApplied = state.pastApplied || {};
+  (window.PAST_RESULTS || []).forEach(function (p) {
+    var q = QMAP[p.id], key = p.id + '@' + p.date;
+    if (!q || state.pastApplied[key]) return;
+    state.records[p.id] = SRS.applyAnswer(null, p.choice === q.answer, p.date, 'daily');
+    state.pastApplied[key] = true;
+  });
+  save();
+  var view = 'home';
+  var session = null;
+
+  function load() {
+    try { var s = JSON.parse(localStorage.getItem(STORE_KEY)); if (s && s.records) return s; } catch (e) {}
+    return { records: {} };
+  }
+  function save() {
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
+    catch (e) { alert('进度没能保存（浏览器禁用了本地存储）'); }
+  }
+  function rec(id) { return state.records[id] || SRS.blank(); }
+
+  // ---------- 小工具 ----------
+  function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function sentenceHTML(s) { return esc(s).replace(/\[(.+?)\]/g, '<u>$1</u>'); }
+  function inline(s) { return esc(s).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>'); }
+  function explHTML(lines) {
+    var out = '', inList = false;
+    lines.forEach(function (l) {
+      if (l.indexOf('- ') === 0) { if (!inList) { out += '<ul>'; inList = true; } out += '<li>' + inline(l.slice(2)) + '</li>'; }
+      else { if (inList) { out += '</ul>'; inList = false; } out += '<p>' + inline(l) + '</p>'; }
+    });
+    return out + (inList ? '</ul>' : '');
+  }
+  function fmtDate(s) {
+    if (!s) return '';
+    var p = s.split('-').map(Number);
+    var d = new Date(p[0], p[1] - 1, p[2]);
+    return (p[1]) + '月' + p[2] + '日 周' + '日一二三四五六'[d.getDay()];
+  }
+  function daysUntil(s) {
+    var a = TODAY.split('-').map(Number), b = s.split('-').map(Number);
+    return Math.round((new Date(b[0], b[1] - 1, b[2]) - new Date(a[0], a[1] - 1, a[2])) / 864e5);
+  }
+  function whenText(s) {
+    var n = daysUntil(s);
+    if (n <= 0) return '今天';
+    if (n === 1) return '明天';
+    return fmtDate(s) + '（' + n + ' 天后）';
+  }
+  function dots(n) {
+    var h = '<span class="dots">';
+    for (var i = 0; i < SRS.MAX_STREAK; i++) h += '<i class="' + (i < n ? 'on' : '') + '"></i>';
+    return h + '</span>';
+  }
+  function counts() {
+    var c = { fresh: 0, due: 0, wrong: 0, done: 0 };
+    Q.forEach(function (q) {
+      var r = rec(q.id);
+      if (q.date <= TODAY && r.status === 'new') c.fresh++;
+      if (SRS.isDue(r, TODAY)) c.due++;
+      if (r.status === 'learning') c.wrong++;
+      if (r.status === 'mastered' || r.status === 'graduated') c.done++;
+    });
+    return c;
+  }
+
+  // ---------- 渲染 ----------
+  function render() {
+    document.getElementById('date').textContent = fmtDate(TODAY);
+    document.getElementById('testbar').innerHTML = params.get('today')
+      ? '<div class="test">测试模式：把今天当作 ' + esc(TODAY) + '（去掉网址里的 ?today=… 回到真实日期）</div>' : '';
+    var c = counts();
+    var nav = document.getElementById('nav');
+    nav.querySelectorAll('button').forEach(function (b) {
+      b.classList.toggle('on', b.dataset.v === (session ? '' : view));
+      if (b.dataset.v === 'wrong') b.innerHTML = '错题集' + (c.wrong ? '<span class="badge">' + c.wrong + '</span>' : '');
+    });
+    var el = document.getElementById('view');
+    if (session) el.innerHTML = quizHTML();
+    else if (view === 'wrong') el.innerHTML = wrongHTML();
+    else if (view === 'all') el.innerHTML = allHTML();
+    else el.innerHTML = homeHTML(c);
+  }
+
+  function homeHTML(c) {
+    var queue = SRS.dailyQueue(Q, state.records, TODAY);
+    var h = '<div class="stats">' +
+      '<div class="stat"><b>' + c.fresh + '</b><small>今日新题</small></div>' +
+      '<div class="stat"><b>' + c.due + '</b><small>到期复习</small></div>' +
+      '<div class="stat"><b>' + c.wrong + '</b><small>错题集</small></div>' +
+      '<div class="stat"><b>' + c.done + '</b><small>已掌握</small></div></div>';
+    if (queue.length) {
+      h += '<div class="card hero"><h2>今天有 ' + queue.length + ' 道题</h2>' +
+        '<p>' + (c.due ? c.due + ' 道错题复习 · ' : '') + c.fresh + ' 道新题</p>' +
+        '<button class="btn" data-act="start-daily">开始练习</button></div>';
+    } else {
+      var next = nextEvent();
+      h += '<div class="card hero"><h2>今天做完了</h2><p>' +
+        (next ? '下一道题：' + whenText(next) : '题库里暂时没有新题') + '</p>' +
+        '<button class="btn ghost" data-act="go-all">去题库复习</button></div>';
+    }
+    return h;
+  }
+
+  function nextEvent() {
+    var best = null;
+    Q.forEach(function (q) {
+      var r = rec(q.id), d = null;
+      if (r.status === 'new' && q.date > TODAY) d = q.date;
+      else if (r.status === 'learning' && r.due > TODAY) d = r.due;
+      if (d && (!best || d < best)) best = d;
+    });
+    return best;
+  }
+
+  function quizHTML() {
+    var s = session;
+    if (s.idx >= s.queue.length) return summaryHTML();
+    var q = QMAP[s.queue[s.idx]], r = rec(q.id), ans = s.answer;
+    var tag = r.status === 'learning' ? '<span class="tag bad">错题 ' + r.streak + '/' + SRS.MAX_STREAK + '</span>'
+      : r.status === 'new' ? '<span class="tag">新题</span>' : '';
+    if (ans != null) tag = '';
+    var h = '<div class="card"><div class="qtop"><span class="lv ' + esc(q.level) + '">' + esc(q.level) + '</span>' +
+      '<span class="sec">' + esc(q.section) + '</span>' + tag +
+      '<span class="progress">' + (s.idx + 1) + ' / ' + s.queue.length + '</span></div>' +
+      '<p class="instr">' + esc(q.instruction) + '</p>' +
+      '<div class="sentence">' + sentenceHTML(q.sentence) + '</div><div class="opts">';
+    q.options.forEach(function (o, i) {
+      var cls = '';
+      if (ans != null) cls = i === q.answer ? 'ok' : (i === ans ? 'bad' : 'dim');
+      h += '<button class="opt ' + cls + '" data-act="pick" data-i="' + i + '"' + (ans != null ? ' disabled' : '') + '>' +
+        '<span class="n">' + (i + 1) + '</span>' + esc(o) + '</button>';
+    });
+    h += '</div></div>';
+    if (ans != null) {
+      var ok = ans === q.answer;
+      h += '<div class="card"><div class="verdict ' + (ok ? 'ok' : 'bad') + '"><span class="dot"></span>' +
+        (ok ? '正确' : '错误 · 正确答案是 ' + (q.answer + 1) + ' ' + esc(q.options[q.answer])) + '</div>' +
+        '<div class="sched">' + schedText(s.after) + '</div>' +
+        '<div class="expl">' + explHTML(q.explanation) + '</div>' +
+        '<div class="next"><button class="btn" data-act="next">' + (s.idx + 1 < s.queue.length ? '下一题' : '完成') + '</button></div></div>';
+    }
+    return h;
+  }
+
+  function schedText(r) {
+    if (r.status === 'mastered') return '已掌握，不会再出现';
+    if (r.status === 'graduated') return '连对 10 次，已移出错题集 🎉';
+    if (r.status === 'learning') return dots(r.streak) + '连对 ' + r.streak + '/' + SRS.MAX_STREAK + ' · 下次出现：' + whenText(r.due);
+    return '';
+  }
+
+  function summaryHTML() {
+    var s = session, right = s.results.filter(Boolean).length;
+    return '<div class="card hero"><h2>' + right + ' / ' + s.results.length + ' 正确</h2>' +
+      '<p>' + (right === s.results.length ? '全对，漂亮。' : '做错的已放进错题集，下星期见。') + '</p>' +
+      '<button class="btn" data-act="end">返回</button></div>';
+  }
+
+  function wrongHTML() {
+    var list = Q.filter(function (q) { return rec(q.id).status === 'learning'; })
+      .sort(function (a, b) { return rec(a.id).due < rec(b.id).due ? -1 : 1; });
+    var h = '<div class="card"><div class="head"><h3>错题集 · ' + list.length + '</h3>' +
+      (list.length ? '<button class="btn small" data-act="free-wrong">全部练一遍</button>' : '') + '</div>';
+    if (!list.length) return h + '<div class="empty">还没有错题</div></div>';
+    list.forEach(function (q) {
+      var r = rec(q.id);
+      h += '<div class="item"><span class="lv ' + esc(q.level) + '">' + esc(q.level) + '</span><div class="main">' +
+        '<div class="s">' + sentenceHTML(q.sentence) + '</div>' +
+        '<div class="m">' + dots(r.streak) + r.streak + '/' + SRS.MAX_STREAK + ' · 答案 ' + esc(q.options[q.answer]) +
+        ' · 错过 ' + r.wrongCount + ' 次 · 下次 ' + whenText(r.due) + '</div></div>' +
+        '<button class="btn ghost small" data-act="free-one" data-id="' + esc(q.id) + '">练</button></div>';
+    });
+    return h + '<div class="m rule" style="margin-top:12px">在这里手动练：做对不算连对（只有到期那天做对才算），做错照样清零。</div></div>';
+  }
+
+  function allHTML() {
+    var reviewable = Q.filter(function (q) { var st = rec(q.id).status; return st === 'mastered' || st === 'graduated'; });
+    var h = '<div class="card"><div class="head"><h3>题库 · ' + Q.length + '</h3>' +
+      (reviewable.length ? '<button class="btn small" data-act="free-done">复习已掌握的</button>' : '') + '</div>';
+    Q.slice().sort(function (a, b) { return a.date < b.date ? 1 : -1; }).forEach(function (q) {
+      var r = rec(q.id), locked = q.date > TODAY, st;
+      if (locked) st = whenText(q.date) + '解锁';
+      else st = { 'new': '未做', learning: '错题 ' + r.streak + '/' + SRS.MAX_STREAK, mastered: '已掌握', graduated: '已毕业' }[r.status];
+      h += '<div class="item"' + (locked ? ' style="opacity:.5"' : '') + '><span class="lv ' + esc(q.level) + '">' + esc(q.level) + '</span>' +
+        '<div class="main"><div class="s">' + (locked ? '🔒 ' + esc(q.section) : sentenceHTML(q.sentence)) + '</div>' +
+        '<div class="m">' + fmtDate(q.date) + ' · ' + st + '</div></div>' +
+        (locked ? '' : '<button class="btn ghost small" data-act="free-one" data-id="' + esc(q.id) + '">练</button>') + '</div>';
+    });
+    return h + '</div>';
+  }
+
+  // ---------- 操作 ----------
+  function startSession(ids, mode) {
+    if (!ids.length) return;
+    session = { queue: ids, idx: 0, mode: mode, answer: null, after: null, results: [] };
+    render(); window.scrollTo(0, 0);
+  }
+
+  document.addEventListener('click', function (e) {
+    var t = e.target.closest('[data-act],[data-v]');
+    if (!t) return;
+    if (t.dataset.v) { session = null; view = t.dataset.v; render(); return; }
+    var act = t.dataset.act;
+    if (act === 'start-daily') startSession(SRS.dailyQueue(Q, state.records, TODAY), 'daily');
+    else if (act === 'go-all') { view = 'all'; render(); }
+    else if (act === 'free-one') startSession([t.dataset.id], 'free');
+    else if (act === 'free-wrong') startSession(Q.filter(function (q) { return rec(q.id).status === 'learning'; }).map(function (q) { return q.id; }), 'free');
+    else if (act === 'free-done') startSession(Q.filter(function (q) { var s = rec(q.id).status; return s === 'mastered' || s === 'graduated'; }).map(function (q) { return q.id; }), 'free');
+    else if (act === 'pick' && session && session.answer == null) {
+      var q = QMAP[session.queue[session.idx]], i = Number(t.dataset.i), ok = i === q.answer;
+      // 今日练习里，只有"到期"的错题和新题按 daily 计；其他按手动复习计
+      var r0 = rec(q.id), mode = session.mode === 'daily' && (r0.status === 'new' || SRS.isDue(r0, TODAY)) ? 'daily' : 'free';
+      state.records[q.id] = SRS.applyAnswer(state.records[q.id], ok, TODAY, mode);
+      save();
+      session.answer = i; session.after = state.records[q.id]; session.results.push(ok);
+      render();
+    }
+    else if (act === 'next') { session.idx++; session.answer = null; session.after = null; render(); window.scrollTo(0, 0); }
+    else if (act === 'end') { session = null; view = 'home'; render(); }
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
