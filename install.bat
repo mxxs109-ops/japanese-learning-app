@@ -11,12 +11,12 @@ set "TMPX=%TEMP%\jla_extract"
 
 echo.
 echo   Downloading...
-curl -sL -o "%ZIP%" "%REPO%"
+"%SystemRoot%\System32\curl.exe" -sL -o "%ZIP%" "%REPO%"
 if errorlevel 1 goto fail
 
 if exist "%TMPX%" rmdir /s /q "%TMPX%"
 mkdir "%TMPX%"
-tar -xf "%ZIP%" -C "%TMPX%"
+"%SystemRoot%\System32\tar.exe" -xf "%ZIP%" -C "%TMPX%"
 if errorlevel 1 goto fail
 if not exist "%TMPX%\japanese-learning-app-main\index.html" goto fail
 
