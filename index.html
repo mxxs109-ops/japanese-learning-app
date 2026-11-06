@@ -333,7 +333,7 @@
         ' · 错过 ' + r.wrongCount + ' 次 · 下次 ' + whenText(r.due) + '</div></div>' +
         '<button class="btn ghost small" data-act="free-one" data-id="' + esc(q.id) + '">练</button></div>';
     });
-    return h + '<div class="m rule" style="margin-top:12px">在这里手动练：做对不算连对（只有到期那天做对才算），做错照样清零。</div></div>';
+    return h + '</div>';
   }
 
   function allHTML() {
