@@ -19,6 +19,9 @@
 10. 🐞 实测 install.bat：`tar: Cannot connect to C: resolve failed` —— 调到了 Git 的 GNU tar。改成写死 `%SystemRoot%\System32\curl.exe / tar.exe`
     - 改的时候 bash heredoc 又把 `\t` 吃成了 TAB，回读控制字符计数抓到，改用 Write 写的脚本修
 12. 题库「复习」改成：**所有已解锁的题随机顺序**出（原来只出已掌握的）；删掉错题集底部那行手动练说明
+13. 桌面图标：用他给的 9 白点截图（105×96）重做 `icon.ico/icon.png`（背景放大+模糊、9 个点按原位置重画成清晰的、圆角）。
+    install.bat 新增：拷 icon、写 `desktop.ini` 给文件夹换图标、在桌面建「日本語 Daily」快捷方式（直接打开 index.html）。
+    本地 zip 实测：首装 + 再装（更新）都 exit=0，快捷方式目标/图标正确，不重复。`desktop.ini` 进 .gitignore
 11. ✅ 实测（从 GitHub 按提交号下载 install.bat，只把安装目录改到临时目录）：exit=0、4 秒、3 个文件与 HEAD 逐字节一致、倒计时 3/2/1 后关窗
 
 **🔙 回滚**：git 历史在仓库里，`git log` 逐条可回。
