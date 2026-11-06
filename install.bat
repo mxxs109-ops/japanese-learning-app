@@ -24,8 +24,21 @@ if not exist "%DEST%" mkdir "%DEST%"
 copy /y "%TMPX%\japanese-learning-app-main\index.html"   "%DEST%\" >nul
 copy /y "%TMPX%\japanese-learning-app-main\questions.js" "%DEST%\" >nul
 copy /y "%TMPX%\japanese-learning-app-main\srs.js"       "%DEST%\" >nul
+copy /y "%TMPX%\japanese-learning-app-main\icon.ico"     "%DEST%\" >nul
+copy /y "%TMPX%\japanese-learning-app-main\icon.png"     "%DEST%\" >nul
 rmdir /s /q "%TMPX%"
 del /q "%ZIP%"
+
+rem folder icon
+if exist "%DEST%\desktop.ini" attrib -h -s -r "%DEST%\desktop.ini"
+> "%DEST%\desktop.ini" echo [.ShellClassInfo]
+>> "%DEST%\desktop.ini" echo IconResource=icon.ico,0
+attrib +h +s "%DEST%\desktop.ini"
+attrib +r "%DEST%"
+
+rem desktop shortcut that opens the app
+powershell -NoProfile -Command "$n=[string][char]0x65E5+[char]0x672C+[char]0x8A9E+' Daily.lnk'; $s=(New-Object -ComObject WScript.Shell).CreateShortcut((Join-Path $env:DESK $n)); $s.TargetPath=(Join-Path $env:DEST 'index.html'); $s.WorkingDirectory=$env:DEST; $s.IconLocation=(Join-Path $env:DEST 'icon.ico')+',0'; $s.Save()"
+ie4uinit.exe -show >nul 2>&1
 
 echo   Done:  %DEST%
 start "" "%DEST%\index.html"
