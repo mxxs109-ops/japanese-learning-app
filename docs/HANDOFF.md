@@ -51,6 +51,8 @@ curl -sL -o "%TEMP%\jla.bat" https://raw.githubusercontent.com/mxxs109-ops/japan
 
 脚本：取真实桌面路径（兼容 OneDrive 重定向）→ curl 下 main.zip → `tar -xf` 解压 → 只拷 3 个文件到桌面 `japanese learning app` → 打开页面 → 3、2、1 → `exit` 关窗。
 倒计时用 `ping -n 2 127.0.0.1`，不用 `timeout`（stdin 重定向时 timeout 直接报错退出）。
+curl / tar 写死 `%SystemRoot%\System32\` 的版本：装了 Git 的机器上，PATH 里的 GNU tar 会把 `C:` 当远程主机（`tar: Cannot connect to C: resolve failed`）。
+改完 install.bat 后 raw 地址有约 5 分钟缓存，测试要按提交号下载：`raw.githubusercontent.com/.../<commit>/install.bat`。
 
 ## 测试
 

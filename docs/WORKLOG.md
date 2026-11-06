@@ -15,6 +15,9 @@
 6. 按他要求删掉首页的规则说明卡片和「导出/导入进度」按钮
 7. 按钮调整：「复习已掌握的」「全部练一遍」从小号改正常大小，文字改成「复习」「练习」；「去题库复习」从白底改黑底
 8. 一键安装：`install.bat`（ASCII + CRLF，已校验 crlf 45 / lf_only 0 / nonascii 0）+ README 写命令
-9. git 本地初始化提交；GitHub 公开仓库 `mxxs109-ops/japanese-learning-app` 第一次创建被权限拦截，等他确认后再推
+9. git 本地初始化提交；建公开仓库被权限拦截两次 → 辐射蓝自己跑 `gh repo create ... --public --source=. --push`，已上线
+10. 🐞 实测 install.bat：`tar: Cannot connect to C: resolve failed` —— 调到了 Git 的 GNU tar。改成写死 `%SystemRoot%\System32\curl.exe / tar.exe`
+    - 改的时候 bash heredoc 又把 `\t` 吃成了 TAB，回读控制字符计数抓到，改用 Write 写的脚本修
+11. ✅ 实测（从 GitHub 按提交号下载 install.bat，只把安装目录改到临时目录）：exit=0、4 秒、3 个文件与 HEAD 逐字节一致、倒计时 3/2/1 后关窗
 
 **🔙 回滚**：git 历史在仓库里，`git log` 逐条可回。
