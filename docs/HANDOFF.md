@@ -41,7 +41,18 @@
    - 解析逐字抄他截图里的文字，别自己编
 2. 如果截图里朋友已经在微信作答了，在 `PAST_RESULTS` 加一条 `{id, date, choice}`（choice 从 0 开始）
    - 每条只写入一次（`state.pastApplied` 记着），会覆盖写入前的浏览器记录，之后的进度不动
-3. `git commit` + `git push`；朋友再跑一次一键命令就更新（进度存在浏览器 localStorage，覆盖文件不丢）
+3. `git commit` + `git push` —— **只改题目不用让朋友重装**：App 打开时自动检查、或点右上角「检查更新」，就从 GitHub 拿最新 `questions.js`
+
+## 检查更新（2026-11-06 加）
+
+- 走 GitHub API `api.github.com/repos/mxxs109-ops/japanese-learning-app/contents/<文件>?ref=main`
+  （带 `Accept: application/vnd.github.raw+json` 直接拿原文；**不用 raw.githubusercontent**，那个有 5 分钟缓存）
+- 拿到的 `questions.js` 用 `new Function('window', 源码)` 跑在假 window 上取 `QUESTIONS / PAST_RESULTS`，
+  逐条 `validQ` 校验，**同 id 以 GitHub 为准**，存进 localStorage `jp-daily-remote-v1`（离线也能用上次拿到的）
+- 打开时自动静默检查：没网 / 出错就什么都不显示；只有拿到新题才提示「拿到 N 道新题」
+- **程序更新**：`version.txt` 里的数 > 页面里的 `APP_VERSION` ⇒ 顶部出「程序有新版本」+「复制安装命令」
+  ⇒ 🔴 **改了 index.html / srs.js / install.bat，必须把 `APP_VERSION` 和 `version.txt` 一起 +1**，否则朋友收不到提示
+- 未登录 API 限额 60 次/小时/IP，个人用够
 
 ## 一键安装命令（Windows cmd）
 

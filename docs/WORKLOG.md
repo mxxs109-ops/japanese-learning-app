@@ -22,6 +22,9 @@
 13. 桌面图标：用他给的 9 白点截图（105×96）重做 `icon.ico/icon.png`（背景放大+模糊、9 个点按原位置重画成清晰的、圆角）。
     install.bat 新增：拷 icon、写 `desktop.ini` 给文件夹换图标、在桌面建「日本語 Daily」快捷方式（直接打开 index.html）。
     本地 zip 实测：首装 + 再装（更新）都 exit=0，快捷方式目标/图标正确，不重复。`desktop.ini` 进 .gitignore
+14. 一键检查更新（APP_VERSION = 2，version.txt = 2）：新题点一下/打开自动就到；程序改了提示复制安装命令。
+    实测（headless Edge，真连 GitHub）：A 本地删掉 ホテル → 自动拿回，显示「拿到 1 道新题」✅；
+    B 把 APP_VERSION 调成 -1 → 出现「程序有新版本 + 复制安装命令」✅
 11. ✅ 实测（从 GitHub 按提交号下载 install.bat，只把安装目录改到临时目录）：exit=0、4 秒、3 个文件与 HEAD 逐字节一致、倒计时 3/2/1 后关窗
 
 **🔙 回滚**：git 历史在仓库里，`git log` 逐条可回。

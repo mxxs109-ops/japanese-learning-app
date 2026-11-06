@@ -42,6 +42,15 @@
   .brand { font-size: 22px; font-weight: 700; letter-spacing: .02em; }
   .brand span { color: var(--accent); }
   .date { color: var(--muted); font-size: 13px; }
+  .hdr-r { display: flex; align-items: center; gap: 10px; }
+  .upd-btn { border: 1px solid var(--line); background: var(--card); color: var(--ink); font: inherit; font-size: 12px;
+             padding: 6px 12px; border-radius: 999px; cursor: pointer; }
+  .upd-btn[disabled] { opacity: .5; cursor: default; }
+  .upd-msg { text-align: center; font-size: 13px; color: var(--muted); margin: -8px 0 16px; }
+  .upd-card { display: flex; align-items: center; gap: 14px; background: var(--accent-soft); border-radius: 14px;
+              padding: 14px 16px; margin-bottom: 16px; }
+  .upd-card .t { flex: 1; font-size: 14px; line-height: 1.6; }
+  .upd-card .t small { display: block; color: var(--muted); font-size: 12px; }
 
   nav { display: flex; gap: 6px; background: var(--card); border: 1px solid var(--line);
         border-radius: 999px; padding: 4px; margin-bottom: 22px; }
@@ -135,8 +144,12 @@
 <div class="wrap">
   <header>
     <div class="brand">日本語 <span>Daily</span></div>
-    <div class="date" id="date"></div>
+    <div class="hdr-r">
+      <div class="date" id="date"></div>
+      <button class="upd-btn" id="updBtn" data-act="check-update">检查更新</button>
+    </div>
   </header>
+  <div id="updbar"></div>
   <div id="testbar"></div>
   <nav id="nav">
     <button data-v="home">今日</button>
@@ -152,25 +165,86 @@
 (function () {
   'use strict';
   var STORE_KEY = 'jp-daily-v1';
-  var Q = window.QUESTIONS;
-  var QMAP = {}; Q.forEach(function (q) { QMAP[q.id] = q; });
+  var REMOTE_KEY = 'jp-daily-remote-v1';
+  // 改了 index.html / srs.js / install.bat 就把这个数 +1，并把 version.txt 改成同一个数
+  var APP_VERSION = 2;
+  var GH_API = 'https://api.github.com/repos/mxxs109-ops/japanese-learning-app/contents/';
+  var INSTALL_CMD = 'curl -sL -o "%TEMP%\\jla.bat" https://raw.githubusercontent.com/mxxs109-ops/japanese-learning-app/main/install.bat && "%TEMP%\\jla.bat"';
 
   // ?today=2026-11-20 可模拟日期，用来测试复习排期
   var params = new URLSearchParams(location.search);
   var TODAY = /^\d{4}-\d{2}-\d{2}$/.test(params.get('today') || '') ? params.get('today') : SRS.todayStr();
 
+  // 题库 = 本地 questions.js + 上次从 GitHub 拿到的（同 id 以 GitHub 为准）
+  var Q = [], QMAP = {}, PAST = [];
+  function validQ(q) {
+    return q && typeof q.id === 'string' && typeof q.date === 'string' && typeof q.sentence === 'string' &&
+      Array.isArray(q.options) && typeof q.answer === 'number' && Array.isArray(q.explanation);
+  }
+  function mergeQuestions(list, past) {
+    (list || []).filter(validQ).forEach(function (q) {
+      if (QMAP[q.id]) Q[Q.indexOf(QMAP[q.id])] = q; else Q.push(q);
+      QMAP[q.id] = q;
+    });
+    (past || []).forEach(function (p) {
+      if (p && p.id && !PAST.some(function (x) { return x.id === p.id && x.date === p.date; })) PAST.push(p);
+    });
+  }
+  mergeQuestions(window.QUESTIONS, window.PAST_RESULTS);
+  try {
+    var cached = JSON.parse(localStorage.getItem(REMOTE_KEY));
+    if (cached) mergeQuestions(cached.questions, cached.past);
+  } catch (e) {}
+
   var state = load();
-  // 补录微信里已做过的题：每条只写入一次（会覆盖写入前的记录），写过之后不再动
-  state.pastApplied = state.pastApplied || {};
-  (window.PAST_RESULTS || []).forEach(function (p) {
-    var q = QMAP[p.id], key = p.id + '@' + p.date;
-    if (!q || state.pastApplied[key]) return;
-    state.records[p.id] = SRS.applyAnswer(null, p.choice === q.answer, p.date, 'daily');
-    state.pastApplied[key] = true;
-  });
-  save();
+  applyPast();
   var view = 'home';
   var session = null;
+  var upd = { busy: false, msg: '', newApp: false };
+
+  // 补录微信里已做过的题：每条只写入一次（会覆盖写入前的记录），写过之后不再动
+  function applyPast() {
+    state.pastApplied = state.pastApplied || {};
+    PAST.forEach(function (p) {
+      var q = QMAP[p.id], key = p.id + '@' + p.date;
+      if (!q || state.pastApplied[key]) return;
+      state.records[p.id] = SRS.applyAnswer(null, p.choice === q.answer, p.date, 'daily');
+      state.pastApplied[key] = true;
+    });
+    save();
+  }
+
+  // ---------- 检查更新 ----------
+  function ghFile(name) {
+    return fetch(GH_API + name + '?ref=main', { cache: 'no-store', headers: { Accept: 'application/vnd.github.raw+json' } })
+      .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); });
+  }
+  function checkUpdate(manual) {
+    if (upd.busy) return;
+    upd.busy = true;
+    if (manual) { upd.msg = '正在检查…'; render(); }
+    Promise.all([ghFile('questions.js'), ghFile('version.txt').catch(function () { return '0'; })])
+      .then(function (res) {
+        var box = {};
+        new Function('window', res[0])(box);
+        var qs = (box.QUESTIONS || []).filter(validQ);
+        if (!qs.length) throw new Error('题库读不出来');
+        var added = qs.filter(function (q) { return !QMAP[q.id]; }).length;
+        mergeQuestions(qs, box.PAST_RESULTS);
+        try { localStorage.setItem(REMOTE_KEY, JSON.stringify({ questions: qs, past: box.PAST_RESULTS || [], at: Date.now() })); } catch (e) {}
+        applyPast();
+        upd.newApp = (parseInt(res[1], 10) || 0) > APP_VERSION;
+        upd.msg = added ? '拿到 ' + added + ' 道新题' : (manual ? '题库已是最新' : '');
+      })
+      .catch(function (e) { upd.msg = manual ? '检查失败：' + (e && e.message ? e.message : '网络问题') : ''; })
+      .then(function () { upd.busy = false; render(); });
+  }
+  function copyCmd() {
+    var done = function () { upd.msg = '已复制：打开 cmd，粘贴，回车'; render(); };
+    var fallback = function () { window.prompt('复制这一行，粘进 cmd 回车：', INSTALL_CMD); };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(INSTALL_CMD).then(done, fallback);
+    else fallback();
+  }
 
   function load() {
     try { var s = JSON.parse(localStorage.getItem(STORE_KEY)); if (s && s.records) return s; } catch (e) {}
@@ -230,6 +304,12 @@
   // ---------- 渲染 ----------
   function render() {
     document.getElementById('date').textContent = fmtDate(TODAY);
+    var ub = document.getElementById('updBtn');
+    ub.disabled = upd.busy; ub.textContent = upd.busy ? '检查中…' : '检查更新';
+    document.getElementById('updbar').innerHTML =
+      (upd.newApp ? '<div class="upd-card"><div class="t">程序有新版本<small>复制安装命令，粘进 cmd 回车就更新，做题进度不会丢</small></div>' +
+        '<button class="btn small" data-act="copy-cmd">复制安装命令</button></div>' : '') +
+      (upd.msg ? '<div class="upd-msg">' + esc(upd.msg) + '</div>' : '');
     document.getElementById('testbar').innerHTML = params.get('today')
       ? '<div class="test">测试模式：把今天当作 ' + esc(TODAY) + '（去掉网址里的 ?today=… 回到真实日期）</div>' : '';
     var c = counts();
@@ -385,9 +465,12 @@
     }
     else if (act === 'next') { session.idx++; session.answer = null; session.after = null; render(); window.scrollTo(0, 0); }
     else if (act === 'end') { session = null; view = 'home'; render(); }
+    else if (act === 'check-update') checkUpdate(true);
+    else if (act === 'copy-cmd') copyCmd();
   });
 
   render();
+  checkUpdate(false);   // 打开时静默检查一次：有新题就直接出现；没网就当没发生
 })();
 </script>
 </body>
