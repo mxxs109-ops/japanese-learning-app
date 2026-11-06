@@ -339,7 +339,7 @@
   function allHTML() {
     var reviewable = Q.filter(function (q) { var st = rec(q.id).status; return st === 'mastered' || st === 'graduated'; });
     var h = '<div class="card"><div class="head"><h3>题库 · ' + Q.length + '</h3>' +
-      (reviewable.length ? '<button class="btn small" data-act="free-done">复习已掌握的</button>' : '') + '</div>';
+      (reviewable.length ? '<button class="btn" data-act="free-done">复习已掌握的</button>' : '') + '</div>';
     Q.slice().sort(function (a, b) { return a.date < b.date ? 1 : -1; }).forEach(function (q) {
       var r = rec(q.id), locked = q.date > TODAY, st;
       if (locked) st = whenText(q.date) + '解锁';
