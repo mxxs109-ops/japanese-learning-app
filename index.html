@@ -323,7 +323,7 @@
     var list = Q.filter(function (q) { return rec(q.id).status === 'learning'; })
       .sort(function (a, b) { return rec(a.id).due < rec(b.id).due ? -1 : 1; });
     var h = '<div class="card"><div class="head"><h3>错题集 · ' + list.length + '</h3>' +
-      (list.length ? '<button class="btn small" data-act="free-wrong">全部练一遍</button>' : '') + '</div>';
+      (list.length ? '<button class="btn" data-act="free-wrong">全部练一遍</button>' : '') + '</div>';
     if (!list.length) return h + '<div class="empty">还没有错题</div></div>';
     list.forEach(function (q) {
       var r = rec(q.id);
