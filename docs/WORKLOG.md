@@ -18,6 +18,7 @@
 9. git 本地初始化提交；建公开仓库被权限拦截两次 → 辐射蓝自己跑 `gh repo create ... --public --source=. --push`，已上线
 10. 🐞 实测 install.bat：`tar: Cannot connect to C: resolve failed` —— 调到了 Git 的 GNU tar。改成写死 `%SystemRoot%\System32\curl.exe / tar.exe`
     - 改的时候 bash heredoc 又把 `\t` 吃成了 TAB，回读控制字符计数抓到，改用 Write 写的脚本修
+12. 题库「复习」改成：**所有已解锁的题随机顺序**出（原来只出已掌握的）；删掉错题集底部那行手动练说明
 11. ✅ 实测（从 GitHub 按提交号下载 install.bat，只把安装目录改到临时目录）：exit=0、4 秒、3 个文件与 HEAD 逐字节一致、倒计时 3/2/1 后关窗
 
 **🔙 回滚**：git 历史在仓库里，`git log` 逐条可回。
