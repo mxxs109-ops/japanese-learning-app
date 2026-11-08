@@ -77,5 +77,6 @@ curl / tar 写死 `%SystemRoot%\System32\` 的版本：装了 Git 的机器上�
 - 微信结果已补录：Day1 新しい 对、通って 错（错题集，11-13 再出现）；Day2 五道全对 → 已掌握
 - 从 Day2 起每天 N5〜N1 各一道
 - 汉字上方注音：`{漢字|かな}`（如 `{選|えら}`），渲染成 ruby；2026-11-08 加，APP_VERSION 3
+- 级别标签用 JLPT 官方配色（取自官网按钮）：N1 `#5dae98` 绿、N2 `#e68329` 橙、N3 `#856ea5` 紫、N4 `#d57567` 红、N5 `#497ebe` 蓝；APP_VERSION 4
 - 本地克隆在 `Desktop\japanese-learning-app`（带横杠）；git 默认凭据是另一个账号会 403，push 用 gh 的 token：
   `git -c credential.helper= -c "credential.helper=!f(){ echo username=x-access-token; echo password=$(gh auth token); }; f" push origin main`

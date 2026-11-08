@@ -18,8 +18,8 @@
     --ok-soft: #e6f6ef;
     --bad: #d6455d;
     --bad-soft: #fcebee;
-    --n5: #4f6bed;
-    --n4: #e0607e;
+    --n5: #497ebe;
+    --n4: #d57567;
     --radius: 18px;
   }
   @media (prefers-color-scheme: dark) {
@@ -85,7 +85,7 @@
   .qtop { display: flex; align-items: center; gap: 10px; margin-bottom: 18px; }
   .lv { font-weight: 800; font-size: 13px; color: #fff; padding: 3px 9px; border-radius: 7px; }
   .lv.N5 { background: var(--n5); } .lv.N4 { background: var(--n4); }
-  .lv.N3 { background: #e49b2a; } .lv.N2 { background: #27a37a; } .lv.N1 { background: #6b4fd8; }
+  .lv.N3 { background: #856ea5; } .lv.N2 { background: #e68329; } .lv.N1 { background: #5dae98; }
   .sec { font-size: 13px; color: var(--muted); }
   .progress { margin-left: auto; font-size: 12px; color: var(--muted); }
   .tag { font-size: 11px; padding: 2px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); }
@@ -168,7 +168,7 @@
   var STORE_KEY = 'jp-daily-v1';
   var REMOTE_KEY = 'jp-daily-remote-v1';
   // 改了 index.html / srs.js / install.bat 就把这个数 +1，并把 version.txt 改成同一个数
-  var APP_VERSION = 3;
+  var APP_VERSION = 4;
   var GH_API = 'https://api.github.com/repos/mxxs109-ops/japanese-learning-app/contents/';
   var INSTALL_CMD = 'curl -sL -o "%TEMP%\\jla.bat" https://raw.githubusercontent.com/mxxs109-ops/japanese-learning-app/main/install.bat && "%TEMP%\\jla.bat"';
 
