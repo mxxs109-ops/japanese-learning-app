@@ -93,6 +93,7 @@
   .instr { font-size: 13px; color: var(--muted); line-height: 1.9; margin: 0 0 28px; }
   .sentence { font-size: 26px; text-align: center; margin: 8px 0 34px; line-height: 1.7; }
   .sentence u { text-decoration: none; border-bottom: 2px solid var(--ink); padding: 0 2px; }
+  rt { font-size: 0.45em; }
   .opts { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   .opt { border: 1px solid var(--line); background: var(--card); color: var(--ink); font: inherit; font-size: 18px;
          padding: 15px 14px; border-radius: 14px; cursor: pointer; text-align: left; display: flex; gap: 12px;
@@ -167,7 +168,7 @@
   var STORE_KEY = 'jp-daily-v1';
   var REMOTE_KEY = 'jp-daily-remote-v1';
   // 改了 index.html / srs.js / install.bat 就把这个数 +1，并把 version.txt 改成同一个数
-  var APP_VERSION = 2;
+  var APP_VERSION = 3;
   var GH_API = 'https://api.github.com/repos/mxxs109-ops/japanese-learning-app/contents/';
   var INSTALL_CMD = 'curl -sL -o "%TEMP%\\jla.bat" https://raw.githubusercontent.com/mxxs109-ops/japanese-learning-app/main/install.bat && "%TEMP%\\jla.bat"';
 
@@ -258,7 +259,7 @@
 
   // ---------- 小工具 ----------
   function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
-  function sentenceHTML(s) { return esc(s).replace(/\[(.+?)\]/g, '<u>$1</u>'); }
+  function sentenceHTML(s) { return esc(s).replace(/\{([^|{}]+)\|([^|{}]+)\}/g, '<ruby>$1<rt>$2</rt></ruby>').replace(/\[(.+?)\]/g, '<u>$1</u>'); }
   function inline(s) { return esc(s).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>'); }
   function explHTML(lines) {
     var out = '', inList = false;

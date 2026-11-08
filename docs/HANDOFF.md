@@ -76,6 +76,6 @@ curl / tar 写死 `%SystemRoot%\System32\` 的版本：装了 Git 的机器上�
 - 题目 7 道：Day1（11-06）新しい N5、通って N4；Day2（11-07）N5〜N1 各一道：ホテル、送ります、代表、種、挑んで
 - 微信结果已补录：Day1 新しい 对、通って 错（错题集，11-13 再出现）；Day2 五道全对 → 已掌握
 - 从 Day2 起每天 N5〜N1 各一道
-- 原题汉字上方的注音（如 選に「えら」）软件不支持，写成括号「選（えら）ばれた」
+- 汉字上方注音：`{漢字|かな}`（如 `{選|えら}`），渲染成 ruby；2026-11-08 加，APP_VERSION 3
 - 本地克隆在 `Desktop\japanese-learning-app`（带横杠）；git 默认凭据是另一个账号会 403，push 用 gh 的 token：
   `git -c credential.helper= -c "credential.helper=!f(){ echo username=x-access-token; echo password=$(gh auth token); }; f" push origin main`
