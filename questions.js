@@ -122,5 +122,10 @@ window.QUESTIONS = [
 //   choice = 当时选的选项序号（从 0 开始）
 window.PAST_RESULTS = [
   { id: 'n5-moji1-atarashii', date: '2026-11-06', choice: 0 },  // 选 1 あたらしい → 对
-  { id: 'n4-moji1-kayotte',   date: '2026-11-06', choice: 0 }   // 选 1 むかって → 错（正确 2 かよって）
+  { id: 'n4-moji1-kayotte',   date: '2026-11-06', choice: 0 },  // 选 1 むかって → 错（正确 2 かよって）
+  { id: 'n5-moji2-hoteru',    date: '2026-11-07', choice: 1 },  // 选 2 ホテル → 对
+  { id: 'n4-moji2-okurimasu', date: '2026-11-07', choice: 3 },  // 选 4 送ります → 对
+  { id: 'n3-moji1-daihyou',   date: '2026-11-07', choice: 2 },  // 选 3 だいひょう → 对
+  { id: 'n2-moji1-tane',      date: '2026-11-07', choice: 1 },  // 选 2 たね → 对
+  { id: 'n1-moji1-idonde',    date: '2026-11-07', choice: 3 }   // 选 4 いどんで → 对
 ];
