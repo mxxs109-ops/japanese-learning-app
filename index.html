@@ -46,6 +46,8 @@
   .upd-btn { border: 1px solid var(--line); background: var(--card); color: var(--ink); font: inherit; font-size: 12px;
              padding: 6px 12px; border-radius: 999px; cursor: pointer; }
   .upd-btn[disabled] { opacity: .5; cursor: default; }
+  .upd-btn.on { background: var(--ink); border-color: var(--ink); color: var(--bg); }
+  ruby.src rt { font-style: italic; color: var(--accent); letter-spacing: 0; }
   .upd-msg { text-align: center; font-size: 13px; color: var(--muted); margin: -8px 0 16px; }
   .upd-card { display: flex; align-items: center; gap: 14px; background: var(--accent-soft); border-radius: 14px;
               padding: 14px 16px; margin-bottom: 16px; }
@@ -105,6 +107,9 @@
   .qimg { text-align: center; margin: -14px 0 26px; }
   .qimg img { max-width: 100%; max-height: 240px; border-radius: 10px; background: #fff; }
   rt { font-size: 0.45em; }
+  .instr rt { font-size: 0.75em; }
+  .instr { line-height: 2.3; }
+  .opt rt { font-size: 0.6em; }
   .opts { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   .opt { border: 1px solid var(--line); background: var(--card); color: var(--ink); font: inherit; font-size: 18px;
          padding: 15px 14px; border-radius: 14px; cursor: pointer; text-align: left; display: flex; gap: 12px;
@@ -158,6 +163,7 @@
     <div class="brand">日本語 <span>Daily</span></div>
     <div class="hdr-r">
       <div class="date" id="date"></div>
+      <button class="upd-btn" id="teachBtn" data-act="teach" title="教学模式：汉字注音 + 外来语原词">注音</button>
       <button class="upd-btn" id="updBtn" data-act="check-update">检查更新</button>
     </div>
   </header>
@@ -179,7 +185,7 @@
   var STORE_KEY = 'jp-daily-v1';
   var REMOTE_KEY = 'jp-daily-remote-v1';
   // 改了 index.html / srs.js / install.bat 就把这个数 +1，并把 version.txt 改成同一个数
-  var APP_VERSION = 6;
+  var APP_VERSION = 7;
   var GH_API = 'https://api.github.com/repos/mxxs109-ops/japanese-learning-app/contents/';
   var INSTALL_CMD = 'curl -sL -o "%TEMP%\\jla.bat" https://raw.githubusercontent.com/mxxs109-ops/japanese-learning-app/main/install.bat && "%TEMP%\\jla.bat"';
 
@@ -193,7 +199,8 @@
     return q && typeof q.id === 'string' && typeof q.date === 'string' && typeof q.sentence === 'string' &&
       Array.isArray(q.options) && typeof q.answer === 'number' && Array.isArray(q.explanation);
   }
-  function mergeQuestions(list, past) {
+  var TEACH = {};   // 教学模式注音版，按题目 id
+  function mergeQuestions(list, past, teach) {
     (list || []).filter(validQ).forEach(function (q) {
       if (QMAP[q.id]) Q[Q.indexOf(QMAP[q.id])] = q; else Q.push(q);
       QMAP[q.id] = q;
@@ -201,11 +208,12 @@
     (past || []).forEach(function (p) {
       if (p && p.id && !PAST.some(function (x) { return x.id === p.id && x.date === p.date; })) PAST.push(p);
     });
+    if (teach && typeof teach === 'object') Object.keys(teach).forEach(function (id) { TEACH[id] = teach[id]; });
   }
-  mergeQuestions(window.QUESTIONS, window.PAST_RESULTS);
+  mergeQuestions(window.QUESTIONS, window.PAST_RESULTS, window.TEACH);
   try {
     var cached = JSON.parse(localStorage.getItem(REMOTE_KEY));
-    if (cached) mergeQuestions(cached.questions, cached.past);
+    if (cached) mergeQuestions(cached.questions, cached.past, cached.teach);
   } catch (e) {}
 
   var state = load();
@@ -242,8 +250,8 @@
         var qs = (box.QUESTIONS || []).filter(validQ);
         if (!qs.length) throw new Error('题库读不出来');
         var added = qs.filter(function (q) { return !QMAP[q.id]; }).length;
-        mergeQuestions(qs, box.PAST_RESULTS);
-        try { localStorage.setItem(REMOTE_KEY, JSON.stringify({ questions: qs, past: box.PAST_RESULTS || [], at: Date.now() })); } catch (e) {}
+        mergeQuestions(qs, box.PAST_RESULTS, box.TEACH);
+        try { localStorage.setItem(REMOTE_KEY, JSON.stringify({ questions: qs, past: box.PAST_RESULTS || [], teach: box.TEACH || {}, at: Date.now() })); } catch (e) {}
         applyPast();
         upd.newApp = (parseInt(res[1], 10) || 0) > APP_VERSION;
         upd.msg = added ? '拿到 ' + added + ' 道新题' : (manual ? '题库已是最新' : '');
@@ -270,7 +278,22 @@
 
   // ---------- 小工具 ----------
   function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
-  function sentenceHTML(s) { return esc(s).replace(/\{([^|{}]+)\|([^|{}]+)\}/g, '<ruby>$1<rt>$2</rt></ruby>').replace(/\[(.+?)\]/g, '<u>$1</u>'); }
+  function sentenceHTML(s) {
+    return esc(s).replace(/\{([^|{}]+)\|([^|{}]+)\}/g, function (m, base, rt) {
+      // 注音是英文 = 外来语的来源词，换一种样式
+      return '<ruby' + (/^[\x20-\x7e]+$/.test(rt) ? ' class="src"' : '') + '>' + base + '<rt>' + rt + '</rt></ruby>';
+    }).replace(/\[(.+?)\]/g, '<u>$1</u>');
+  }
+  // 教学模式：有注音版就用注音版，没有就用原文
+  function teachOn() { return !!state.teach; }
+  function tText(q, field) {
+    var t = teachOn() && TEACH[q.id];
+    return (t && typeof t[field] === 'string') ? t[field] : q[field];
+  }
+  function tOption(q, i) {
+    var t = teachOn() && TEACH[q.id];
+    return (t && Array.isArray(t.options) && typeof t.options[i] === 'string') ? t.options[i] : q.options[i];
+  }
   function inline(s) { return esc(s).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>'); }
   function explHTML(lines) {
     var out = '', inList = false;
@@ -316,6 +339,7 @@
   // ---------- 渲染 ----------
   function render() {
     document.getElementById('date').textContent = fmtDate(TODAY);
+    document.getElementById('teachBtn').classList.toggle('on', teachOn());
     var ub = document.getElementById('updBtn');
     ub.disabled = upd.busy; ub.textContent = upd.busy ? '检查中…' : '检查更新';
     document.getElementById('updbar').innerHTML =
@@ -385,13 +409,13 @@
     var h = '<div class="card"><div class="qtop"><span class="lv ' + esc(q.level) + '">' + esc(q.level) + '</span>' +
       '<span class="sec">' + esc(q.section) + '</span>' + tag +
       '<span class="progress">' + (s.idx + 1) + ' / ' + s.queue.length + '</span></div>' +
-      '<p class="instr">' + esc(q.instruction) + '</p>' +
-      '<div class="sentence">' + sentenceHTML(q.sentence) + '</div>' + imageHTML(q) + '<div class="opts">';
+      '<p class="instr">' + sentenceHTML(tText(q, 'instruction')) + '</p>' +
+      '<div class="sentence">' + sentenceHTML(tText(q, 'sentence')) + '</div>' + imageHTML(q) + '<div class="opts">';
     q.options.forEach(function (o, i) {
       var cls = '';
       if (ans != null) cls = i === q.answer ? 'ok' : (i === ans ? 'bad' : 'dim');
       h += '<button class="opt ' + cls + '" data-act="pick" data-i="' + i + '"' + (ans != null ? ' disabled' : '') + '>' +
-        '<span class="n">' + (i + 1) + '</span>' + esc(o) + '</button>';
+        '<span class="n">' + (i + 1) + '</span><span>' + sentenceHTML(tOption(q, i)) + '</span></button>';
     });
     h += '</div></div>';
     if (ans != null) {
@@ -428,7 +452,7 @@
     list.forEach(function (q) {
       var r = rec(q.id);
       h += '<div class="item"><span class="lv ' + esc(q.level) + '">' + esc(q.level) + '</span><div class="main">' +
-        '<div class="s">' + sentenceHTML(q.sentence) + '</div>' +
+        '<div class="s">' + sentenceHTML(tText(q, 'sentence')) + '</div>' +
         '<div class="m">' + dots(r.streak) + r.streak + '/' + SRS.MAX_STREAK + ' · 答案 ' + esc(q.options[q.answer]) +
         ' · 错过 ' + r.wrongCount + ' 次 · 下次 ' + whenText(r.due) + '</div></div>' +
         '<button class="btn ghost small" data-act="free-one" data-id="' + esc(q.id) + '">练</button></div>';
@@ -459,7 +483,7 @@
       if (locked) st = whenText(q.date) + '解锁';
       else st = { 'new': '未做', learning: '错题 ' + r.streak + '/' + SRS.MAX_STREAK, mastered: '已掌握', graduated: '已毕业' }[r.status];
       h += '<div class="item"' + (locked ? ' style="opacity:.5"' : '') + '><span class="lv ' + esc(q.level) + '">' + esc(q.level) + '</span>' +
-        '<div class="main"><div class="s">' + (locked ? '🔒 ' + esc(q.section) : sentenceHTML(q.sentence)) + '</div>' +
+        '<div class="main"><div class="s">' + (locked ? '🔒 ' + esc(q.section) : sentenceHTML(tText(q, 'sentence'))) + '</div>' +
         '<div class="m">' + fmtDate(q.date) + ' · ' + st + '</div></div>' +
         (locked ? '' : '<button class="btn ghost small" data-act="free-one" data-id="' + esc(q.id) + '">练</button>') + '</div>';
     });
@@ -507,6 +531,7 @@
     else if (act === 'next') { session.idx++; session.answer = null; session.after = null; render(); window.scrollTo(0, 0); }
     else if (act === 'end') { session = null; view = 'home'; render(); }
     else if (act === 'check-update') checkUpdate(true);
+    else if (act === 'teach') { state.teach = !state.teach; save(); render(); }
     else if (act === 'copy-cmd') copyCmd();
   });
 

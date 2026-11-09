@@ -79,6 +79,11 @@ curl / tar 写死 `%SystemRoot%\System32\` 的版本：装了 Git 的机器上�
   页面先读本地图，本地没有（旧安装）就改读 `raw.githubusercontent.com/.../main/images/...`；install.bat 会 xcopy `images/`。
   ⚠️ 版本 ≤4 的旧 index.html 不认 `image` 字段 → 只是看不到图，题照样能做；顶部会提示新版本
 - Day3 五道的解析都已换成辐射蓝发来的版本（逐字抄）
+- **教学模式「注音」**（11-09，APP_VERSION 7）：右上角小开关，存 `state.teach`。打开后题目句子、说明、选项里**所有汉字带注音**
+  （考点也标，他拍板：教学模式就是用来学的），**外来语上面标英文原词**（蓝色斜体，`{クラス|class}`，注音是纯 ASCII 自动换样式）。
+  数据在 `questions.js` 底部 `window.TEACH[id] = {instruction?, sentence?, options?}`，没写的字段显示原文；检查更新会一起拉。
+  🔴 **每天加新题时要同时写 TEACH**，然后跑 `node tools/check_teach.js`：去掉注音后必须和原题逐字一样、不许有没注音的汉字
+  （片假名无来源词只给 INFO，假词选项正常）。假词选项（守けて/拾集）按单字读音标
 - 题库级别筛选（11-09，APP_VERSION 6）：可多选，存 `state.levels`；**只管题库列表和「复习」，「今日」不筛**（他拍板：
   否则没选的级别到期错题永远不出现）。「错题集」标签不显示红点数字（他要求）
 - 微信结果已补录：Day1 新しい 对、通って 错（错题集，11-13 再出现）；Day2 五道全对 → 已掌握
