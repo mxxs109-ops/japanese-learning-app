@@ -41,7 +41,10 @@
    - 解析逐字抄他截图里的文字，别自己编
 2. 如果截图里朋友已经在微信作答了，在 `PAST_RESULTS` 加一条 `{id, date, choice}`（choice 从 0 开始）
    - 每条只写入一次（`state.pastApplied` 记着），会覆盖写入前的浏览器记录，之后的进度不动
-3. `git commit` + `git push` —— **只改题目不用让朋友重装**：App 打开时自动检查、或点右上角「检查更新」，就从 GitHub 拿最新 `questions.js`
+3. 🔴 **截图两处都要放**（他 11-09 定：软件里可以没有，文件夹和 GitHub 必须有）：
+   题目 + 解析截图放进 `screenshots/<级别>/` **和** 桌面 `日本語Daily_真题截图\<级别>\`，两边一致；
+   命名 `DayN_MM-DD_单词_1题目.png` / `_2解析.png`。install.bat 不拷 screenshots/，不进软件
+4. `git commit` + `git push` —— **只改题目不用让朋友重装**：App 打开时自动检查、或点右上角「检查更新」，就从 GitHub 拿最新 `questions.js`
 
 ## 检查更新（2026-11-06 加）
 

@@ -20,6 +20,8 @@
 9. 教学模式「注音」开关（APP_VERSION 7）：手工给 12 题写 TEACH 注音版（汉字注音 + 外来语英文原词 bus/hotel/class/supermarket/register/receipt）。
    新增 `tools/check_teach.js`：真文件 [OK]；故意改一个字 + 删一个注音的副本 → 两条都报 [FAIL] exit=1 ✅（判据能红能绿）。
    截图验 N4 レシート（外来语蓝字）、N1 推測（说明/句子/选项全注音）✅；选项和说明的注音字号调大
+10. 他要求截图也上 GitHub（推翻第 8 条的「仓库不放截图」）：24 张复制进 `screenshots/N5〜N1`（2.9M），
+    与桌面文件夹 md5 逐个一致 ✅；已确认没有微信聊天内容（通って 只裁了题目卡片）；install.bat 只拷 images/，截图不进软件
 
 ## 2026-11-06（周五）· 建项目
 
