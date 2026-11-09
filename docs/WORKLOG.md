@@ -1,5 +1,15 @@
 # WORKLOG · 日本語 Daily
 
+## 2026-11-09（周一）· Day3
+
+1. 开工先 `git fetch`：GitHub 比这份本地克隆多 8 个提交（另一个会话在 `Desktop\japanese-learning-app` 做的 Day2 五题、注音、官方配色）→ `merge --ff-only` 后再改
+2. 加 Day3 N5「ここは（　）です。べんきょうできません。」答案 3 うるさい；解析是我写的（截图没给解析）
+3. 题目插图支持：`image` 字段 + `images/n5-moji3-urusai.png`（从截图按非白像素自动裁边，575×324）；
+   本地图加载失败 → 自动改读 GitHub raw；install.bat 加 xcopy images。APP_VERSION 4→5，version.txt 同步
+4. 句子换行：`word-break: keep-all` + `overflow-wrap: anywhere`，只在空格处断（原来断成「できませ／ん。」）
+5. 实测（headless Edge，自动点「开始练习」）：带图本地 ✅；删掉 images 文件夹 → 图从 GitHub 加载 ✅（raw 200，91969B）；
+   install.bat 回读 crlf 59 / lf_only 0 / ctrl 0 / nonascii 0。手机宽度截图被切边，判断是无头窗口最小宽度的假象，**未验证**
+
 ## 2026-11-06（周五）· 建项目
 
 **起因**：辐射蓝在微信每天给朋友发一道 JLPT 真题，要做成能选答案、看解析、带错题集和按周复习的小软件。
