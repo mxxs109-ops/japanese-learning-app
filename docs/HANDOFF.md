@@ -87,6 +87,11 @@ curl / tar 写死 `%SystemRoot%\System32\` 的版本：装了 Git 的机器上�
   数据在 `questions.js` 底部 `window.TEACH[id] = {instruction?, sentence?, options?}`，没写的字段显示原文；检查更新会一起拉。
   🔴 **每天加新题时要同时写 TEACH**，然后跑 `node tools/check_teach.js`：去掉注音后必须和原题逐字一样、不许有没注音的汉字
   （片假名无来源词只给 INFO，假词选项正常）。假词选项（守けて/拾集）按单字读音标
+- **手写笔记电子版**（11-09 起）：`notes/PageNNN/` = 原稿照片 `PageNNN_原稿照片.jpg` + 排版源 `PageNNN.html` +
+  两个 PDF（`_照片配色.pdf` 纸色+金棕/红墨水；`_白底.pdf` 白纸淡线，金棕→黑、红→正蓝）。桌面 `日本語Daily_手写笔记\PageNNN\` 同一份。
+  导出：`python tools/make_notes_pdf.py notes/PageNNN/PageNNN.html`。HTML 里一行 = 本子一条横线，换行照手写稿；
+  颜色约定：题干说明/中文注释/圈正确答案/×/对调括号 = 金棕；Page 标题/日文句子/选项/波浪线 = 红。
+  🔴 **Page001 他还没抄完**，以后会发新照片：替换 `_原稿照片.jpg`，按新照片改 HTML，重导两个 PDF，两处同步
 - 题库级别筛选（11-09，APP_VERSION 6）：可多选，存 `state.levels`；**只管题库列表和「复习」，「今日」不筛**（他拍板：
   否则没选的级别到期错题永远不出现）。「错题集」标签不显示红点数字（他要求）
 - 微信结果已补录：Day1 新しい 对、通って 错（错题集，11-13 再出现）；Day2 五道全对 → 已掌握

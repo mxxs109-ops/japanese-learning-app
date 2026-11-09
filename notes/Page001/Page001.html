@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>Page 001</title>
+<!--
+  手写笔记 Page 001 的电子版。两个配色：
+    Page001.html?theme=photo  照片配色（纸色 + 金棕 / 红墨水）
+    Page001.html?theme=white  白底淡线（金棕 → 黑，红 → 正蓝）
+  导出 PDF：tools/make_notes_pdf.py
+  每行 = 本子上的一条横线；行数、换行照手写稿
+-->
+<style>
+  @page { size: A4; margin: 0; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+  .theme-photo { --paper: #eef0ea; --line: #9fb0bc; --meta: #7c8790; --gold: #9a7a30; --red: #a52a3a; }
+  .theme-white { --paper: #ffffff; --line: #dbe3ea; --meta: #9aa4ad; --gold: #111111; --red: #1640e6; }
+
+  .page {
+    width: 210mm; height: 297mm; position: relative; overflow: hidden;
+    background: var(--paper);
+    font-family: "Yu Gothic Medium", "Yu Gothic", "Meiryo", sans-serif; font-weight: 500;
+    color: var(--gold);
+  }
+  .zh { font-family: "Microsoft YaHei", "Yu Gothic", sans-serif; font-weight: 400; font-size: 0.92em; }
+  .row.zh { font-size: 3.8mm; }
+  .gold { color: var(--gold); } .red { color: var(--red); }
+
+  /* header */
+  .head { position: absolute; left: 0; right: 0; top: 0; height: 30mm; border-bottom: 0.3mm solid var(--line); }
+  .title { position: absolute; left: 18mm; bottom: 1.6mm; font-size: 6.2mm; color: var(--red); font-family: "Segoe UI", "Yu Gothic", sans-serif; }
+  .meta { position: absolute; right: 14mm; width: 55mm; font-family: "Segoe UI", sans-serif; font-size: 2.6mm; color: var(--meta); }
+  .meta.no { top: 8mm; border-bottom: 0.25mm dotted var(--meta); padding-bottom: 2.2mm; }
+  .meta.date { bottom: 2mm; }
+  .meta.date span { margin-left: 22mm; letter-spacing: 9mm; }
+
+  /* ruled rows */
+  .rows { position: absolute; left: 0; right: 0; top: 30mm; }
+  .row {
+    height: 9.4mm; border-bottom: 0.3mm solid var(--line);
+    padding: 0 14mm 1.3mm 18mm; display: flex; align-items: flex-end; white-space: nowrap;
+    font-size: 4.15mm; letter-spacing: 0.02em;
+  }
+  .in1 { padding-left: 24mm; } .in2 { padding-left: 28mm; }
+  .s { display: inline-block; width: 2.2mm; }      /* 词间空格 */
+  .opt { margin-right: 9mm; }
+  .num { margin-right: 0.8mm; }
+  .circ {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 5.6mm; height: 5.6mm; border: 0.35mm solid var(--gold); border-radius: 50%;
+    color: var(--gold); font-size: 3.4mm; margin-right: 1mm; font-family: "Segoe UI", sans-serif;
+  }
+  .wavy { text-decoration: underline wavy var(--red); text-decoration-thickness: 0.3mm; text-underline-offset: 1.2mm; }
+  .under { position: relative; display: inline-block; }
+  .under::after { content: ""; position: absolute; left: 0; right: 0; bottom: -0.6mm; border-bottom: 0.3mm solid var(--gold); }
+  /* × under a character: drawn in the row below */
+  .x { position: relative; display: inline-block; }
+  .x::after { content: "×"; position: absolute; left: 50%; transform: translateX(-50%); top: 8.6mm; color: var(--gold); font-size: 4mm; font-family: "Segoe UI", sans-serif; }
+  /* bracket marking swapped kana (like ら|た) */
+  .br { display: inline-block; border-left: 0.35mm solid var(--gold); border-bottom: 0.35mm solid var(--gold); padding: 0 0.3mm 0 0.6mm; line-height: 1.05; }
+  .gap { display: inline-block; width: 13mm; }
+</style>
+</head>
+<body>
+<script>
+  var t = new URLSearchParams(location.search).get('theme') === 'white' ? 'white' : 'photo';
+  document.documentElement.className = 'theme-' + t;
+  document.title = 'Page 001 · ' + (t === 'white' ? '白底' : '照片配色');
+</script>
+<div class="page">
+  <div class="head">
+    <div class="title">Page 001:</div>
+    <div class="meta no">No.</div>
+    <div class="meta date">Date<span>..</span></div>
+  </div>
+
+  <div class="rows">
+    <div class="row"></div>
+
+    <!-- A1 -->
+    <div class="row gold">A1：<span class="under">＿＿</span>の<span class="s"></span>ことばは<span class="s"></span>ひらがなで<span class="s"></span>どう<span class="s"></span>かきますか。1・2・3・4から<span class="s"></span>いちばん<span class="s"></span>いい</div>
+    <div class="row gold">ものを<span class="s"></span>ひとつ<span class="s"></span>えらんで<span class="s"></span>ください。</div>
+    <div class="row in1"><span class="red"><span class="wavy">新しい</span><span class="s"></span>くるまですね。</span><span class="s"></span><span class="gold zh">［真是一辆新车啊］.</span></div>
+    <div class="row red">
+      <span class="opt"><span class="circ">1.</span>あたらしい</span>
+      <span class="opt"><span class="num">2.</span>あ<span class="x">だ</span>らしい</span>
+      <span class="opt"><span class="num">3.</span>あら<span class="br">た</span>しい</span>
+      <span class="opt"><span class="num">4.</span>あら<span class="br"><span class="x">だ</span></span>しい</span>
+    </div>
+    <div class="row"></div>
+
+    <!-- A2 -->
+    <div class="row gold">A2：<span class="under">＿＿</span>の<span class="s"></span>ことばは<span class="s"></span>どう<span class="s"></span>かきますか。1・2・3・4から<span class="s"></span>いちばん<span class="s"></span>いい<span class="s"></span>ものを</div>
+    <div class="row gold">ひとつ<span class="s"></span>えらんで<span class="s"></span>ください。</div>
+    <div class="row in1"><span class="red">あの<span class="s"></span>ほてるは<span class="s"></span>ゆうめいです。</span><span class="s"></span><span class="gold zh">［hotel］［那家酒店很有名］</span></div>
+    <div class="row red">
+      <span class="opt"><span class="num">1.</span>ホ<span class="x">ラ</span>ル</span>
+      <span class="opt"><span class="circ">2</span>ホテル</span>
+      <span class="opt"><span class="num">3.</span>ホ<span class="x">ラ</span><span class="x">ハ</span></span>
+      <span class="opt"><span class="num">4.</span>ホテ<span class="x">ハ</span></span>
+    </div>
+    <div class="row"></div>
+    <div class="row"></div>
+
+    <!-- A3 -->
+    <div class="row gold">A3：（<span class="gap" style="width:6mm"></span>）に<span class="s"></span>なにを<span class="s"></span>いれますか。1・2・3・4から<span class="s"></span>いちばん<span class="s"></span>いい<span class="s"></span>ものを<span class="s"></span>ひとつ</div>
+    <div class="row gold">えらんで<span class="s"></span>ください。</div>
+    <div class="row in1"><span class="red">ここは（<span class="gap" style="width:8mm"></span>）です。べんきょうできません。</span><span class="s"></span><span class="gold zh">［这里很吵，没法学习］</span></div>
+    <div class="row red">
+      <span class="opt"><span class="num">1.</span>くらい</span>
+      <span class="opt"><span class="num">2.</span>さむい</span>
+      <span class="opt"><span class="circ">3.</span>うるさい</span>
+      <span class="opt"><span class="num">4.</span>あぶない</span>
+    </div>
+    <div class="row gold zh">
+      <span class="opt" style="margin-right:7.5mm">×［暗的］</span>
+      <span class="opt" style="margin-right:7.5mm">×［冷的］</span>
+      <span class="opt" style="margin-right:7.5mm"><span style="display:inline-block;width:2.6mm"></span>［吵闹的］</span>
+      <span class="opt">×［危险的］</span>
+    </div>
+
+    <!-- 空行（本子剩下的横线） -->
+    <div class="row"></div><div class="row"></div><div class="row"></div><div class="row"></div>
+    <div class="row"></div><div class="row"></div><div class="row"></div><div class="row"></div>
+    <div class="row"></div><div class="row"></div><div class="row"></div>
+  </div>
+</div>
+</body>
+</html>
