@@ -4,11 +4,12 @@
 <meta charset="utf-8">
 <title>Page 001</title>
 <!--
-  手写笔记 Page 001 的电子版。两个配色：
-    Page001.html?theme=photo  照片配色（纸色 + 金棕 / 红墨水）
-    Page001.html?theme=white  白底淡线（金棕 → 黑，红 → 正蓝）
-  导出 PDF：tools/make_notes_pdf.py
+  手写笔记 Page 001 的电子版。
+    ?theme=photo  照片配色（纸色 + 金棕 / 红墨水）      ?theme=white  白底淡线（金棕 → 黑，红 → 正蓝）
+    &clean=1      隐藏笔记：不显示正确答案的圈、×、对调括号、中文注释（题目照旧）
+  屏幕上右上角有切换按钮；导出 PDF：tools/make_notes_pdf.py（4 个版本）
   每行 = 本子上的一条横线；行数、换行照手写稿
+  标了 class="note" 的都是「笔记」，隐藏笔记时消失
 -->
 <style>
   @page { size: A4; margin: 0; }
@@ -44,7 +45,7 @@
     padding: 0 14mm 1.3mm 18mm; display: flex; align-items: flex-end; white-space: nowrap;
     font-size: 4.15mm; letter-spacing: 0.02em;
   }
-  .in1 { padding-left: 24mm; } .in2 { padding-left: 28mm; }
+  .in1 { padding-left: 24mm; }
   .s { display: inline-block; width: 2.2mm; }      /* 词间空格 */
   .opt { margin-right: 9mm; }
   .num { margin-right: 0.8mm; }
@@ -53,6 +54,7 @@
     width: 5.6mm; height: 5.6mm; border: 0.35mm solid var(--gold); border-radius: 50%;
     color: var(--gold); font-size: 3.4mm; margin-right: 1mm; font-family: "Segoe UI", sans-serif;
   }
+  .circ .dot { display: none; }
   .wavy { text-decoration: underline wavy var(--red); text-decoration-thickness: 0.3mm; text-underline-offset: 1.2mm; }
   .under { position: relative; display: inline-block; }
   .under::after { content: ""; position: absolute; left: 0; right: 0; bottom: -0.6mm; border-bottom: 0.3mm solid var(--gold); }
@@ -63,36 +65,64 @@
   .br { display: inline-block; border-left: 0.35mm solid var(--gold); border-bottom: 0.35mm solid var(--gold); padding: 0 0.3mm 0 0.6mm; line-height: 1.05; }
   .gap { display: inline-block; width: 13mm; }
 
+  /* 题目插图（原图原色，不跟墨水颜色） */
+  .pic { position: absolute; right: 12mm; display: flex; align-items: center; justify-content: center; }
+  .pic img { max-width: 100%; max-height: 100%; display: block; border-radius: 1.5mm; }
+
+  /* ---- 隐藏笔记 ---- */
+  .clean .note { visibility: hidden; }
+  .clean .x::after { content: none; }
+  .clean .br { border: 0; padding: 0; }
+  .clean .circ { border-color: transparent; width: auto; height: auto; border-radius: 0; color: var(--red);
+                 font-size: inherit; font-family: inherit; margin-right: 0.8mm; }
+  .clean .circ .dot { display: inline; }
+
   /* 屏幕上看：页面居中 + 右上角切换按钮；打印/导出 PDF 时不显示 */
   @media screen {
     body { background: #d9dcdf; padding: 24px 0 48px; }
     .page { margin: 0 auto; box-shadow: 0 4px 24px rgba(0,0,0,.18); }
   }
-  .switch { position: fixed; top: 16px; right: 16px; display: flex; gap: 0; z-index: 10;
-            background: #fff; border-radius: 999px; padding: 4px; box-shadow: 0 2px 10px rgba(0,0,0,.15);
+  .switch { position: fixed; top: 16px; right: 16px; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; z-index: 10;
             font-family: "Microsoft YaHei", "Yu Gothic", sans-serif; }
-  .switch button { border: 0; background: transparent; font: inherit; font-size: 14px; padding: 8px 16px;
-                   border-radius: 999px; cursor: pointer; color: #555; }
-  .switch button.on { background: #1f1f1f; color: #fff; }
+  .seg { display: flex; background: #fff; border-radius: 999px; padding: 4px; box-shadow: 0 2px 10px rgba(0,0,0,.15); }
+  .seg button { border: 0; background: transparent; font: inherit; font-size: 14px; padding: 8px 16px;
+                border-radius: 999px; cursor: pointer; color: #555; }
+  .seg button.on { background: #1f1f1f; color: #fff; }
   @media print { .switch { display: none !important; } }
 </style>
 </head>
 <body>
 <div class="switch">
-  <button data-t="photo">照片配色</button>
-  <button data-t="white">白底</button>
+  <div class="seg">
+    <button data-t="photo">照片配色</button>
+    <button data-t="white">白底</button>
+  </div>
+  <div class="seg">
+    <button data-c="0">显示笔记</button>
+    <button data-c="1">隐藏笔记</button>
+  </div>
 </div>
 <script>
-  function setTheme(t) {
-    t = t === 'white' ? 'white' : 'photo';
-    document.documentElement.className = 'theme-' + t;
-    document.title = 'Page 001 · ' + (t === 'white' ? '白底' : '照片配色');
-    document.querySelectorAll('.switch button').forEach(function (b) { b.classList.toggle('on', b.dataset.t === t); });
-    try { history.replaceState(null, '', location.pathname + (t === 'white' ? '?theme=white' : '')); } catch (e) {}
+  var view = { t: 'photo', c: '0' };
+  function apply() {
+    document.documentElement.className = 'theme-' + view.t + (view.c === '1' ? ' clean' : '');
+    document.title = 'Page 001 · ' + (view.t === 'white' ? '白底' : '照片配色') + (view.c === '1' ? ' · 隐藏笔记' : '');
+    document.querySelectorAll('.seg button').forEach(function (b) {
+      b.classList.toggle('on', b.dataset.t ? b.dataset.t === view.t : b.dataset.c === view.c);
+    });
+    var q = [];
+    if (view.t === 'white') q.push('theme=white');
+    if (view.c === '1') q.push('clean=1');
+    try { history.replaceState(null, '', location.pathname + (q.length ? '?' + q.join('&') : '')); } catch (e) {}
   }
-  setTheme(new URLSearchParams(location.search).get('theme'));
+  var p = new URLSearchParams(location.search);
+  view.t = p.get('theme') === 'white' ? 'white' : 'photo';
+  view.c = p.get('clean') === '1' ? '1' : '0';
+  apply();
   document.querySelector('.switch').addEventListener('click', function (e) {
-    var b = e.target.closest('button'); if (b) setTheme(b.dataset.t);
+    var b = e.target.closest('button'); if (!b) return;
+    if (b.dataset.t) view.t = b.dataset.t; else view.c = b.dataset.c;
+    apply();
   });
 </script>
 <div class="page">
@@ -108,9 +138,9 @@
     <!-- A1 -->
     <div class="row gold">A1：<span class="under">＿＿</span>の<span class="s"></span>ことばは<span class="s"></span>ひらがなで<span class="s"></span>どう<span class="s"></span>かきますか。1・2・3・4から<span class="s"></span>いちばん<span class="s"></span>いい</div>
     <div class="row gold">ものを<span class="s"></span>ひとつ<span class="s"></span>えらんで<span class="s"></span>ください。</div>
-    <div class="row in1"><span class="red"><span class="wavy">新しい</span><span class="s"></span>くるまですね。</span><span class="s"></span><span class="gold zh">［真是一辆新车啊］.</span></div>
+    <div class="row in1"><span class="red"><span class="wavy">新しい</span><span class="s"></span>くるまですね。</span><span class="s"></span><span class="gold zh note">［真是一辆新车啊］.</span></div>
     <div class="row red">
-      <span class="opt"><span class="circ">1.</span>あたらしい</span>
+      <span class="opt"><span class="circ">1<span class="dot"></span>.</span>あたらしい</span>
       <span class="opt"><span class="num">2.</span>あ<span class="x">だ</span>らしい</span>
       <span class="opt"><span class="num">3.</span>あら<span class="br">た</span>しい</span>
       <span class="opt"><span class="num">4.</span>あら<span class="br"><span class="x">だ</span></span>しい</span>
@@ -120,10 +150,10 @@
     <!-- A2 -->
     <div class="row gold">A2：<span class="under">＿＿</span>の<span class="s"></span>ことばは<span class="s"></span>どう<span class="s"></span>かきますか。1・2・3・4から<span class="s"></span>いちばん<span class="s"></span>いい<span class="s"></span>ものを</div>
     <div class="row gold">ひとつ<span class="s"></span>えらんで<span class="s"></span>ください。</div>
-    <div class="row in1"><span class="red">あの<span class="s"></span>ほてるは<span class="s"></span>ゆうめいです。</span><span class="s"></span><span class="gold zh">［hotel］［那家酒店很有名］</span></div>
+    <div class="row in1"><span class="red">あの<span class="s"></span>ほてるは<span class="s"></span>ゆうめいです。</span><span class="s"></span><span class="gold zh note">［hotel］［那家酒店很有名］</span></div>
     <div class="row red">
       <span class="opt"><span class="num">1.</span>ホ<span class="x">ラ</span>ル</span>
-      <span class="opt"><span class="circ">2</span>ホテル</span>
+      <span class="opt"><span class="circ">2<span class="dot">.</span></span>ホテル</span>
       <span class="opt"><span class="num">3.</span>ホ<span class="x">ラ</span><span class="x">ハ</span></span>
       <span class="opt"><span class="num">4.</span>ホテ<span class="x">ハ</span></span>
     </div>
@@ -133,24 +163,31 @@
     <!-- A3 -->
     <div class="row gold">A3：（<span class="gap" style="width:6mm"></span>）に<span class="s"></span>なにを<span class="s"></span>いれますか。1・2・3・4から<span class="s"></span>いちばん<span class="s"></span>いい<span class="s"></span>ものを<span class="s"></span>ひとつ</div>
     <div class="row gold">えらんで<span class="s"></span>ください。</div>
-    <div class="row in1"><span class="red">ここは（<span class="gap" style="width:8mm"></span>）です。べんきょうできません。</span><span class="s"></span><span class="gold zh">［这里很吵，没法学习］</span></div>
+    <div class="row in1"><span class="red">ここは（<span class="gap" style="width:8mm"></span>）です。べんきょうできません。</span><span class="s"></span><span class="gold zh note">［这里很吵，没法学习］</span></div>
     <div class="row red">
       <span class="opt"><span class="num">1.</span>くらい</span>
       <span class="opt"><span class="num">2.</span>さむい</span>
-      <span class="opt"><span class="circ">3.</span>うるさい</span>
+      <span class="opt"><span class="circ">3<span class="dot"></span>.</span>うるさい</span>
       <span class="opt"><span class="num">4.</span>あぶない</span>
     </div>
     <div class="row gold zh">
-      <span class="opt" style="margin-right:7.5mm">×［暗的］</span>
-      <span class="opt" style="margin-right:7.5mm">×［冷的］</span>
-      <span class="opt" style="margin-right:7.5mm"><span style="display:inline-block;width:2.6mm"></span>［吵闹的］</span>
-      <span class="opt">×［危险的］</span>
+      <span class="note">
+        <span class="opt" style="margin-right:7.5mm">×［暗的］</span>
+        <span class="opt" style="margin-right:7.5mm">×［冷的］</span>
+        <span class="opt" style="margin-right:7.5mm"><span style="display:inline-block;width:2.6mm"></span>［吵闹的］</span>
+        <span class="opt">×［危险的］</span>
+      </span>
     </div>
 
     <!-- 空行（本子剩下的横线） -->
     <div class="row"></div><div class="row"></div><div class="row"></div><div class="row"></div>
     <div class="row"></div><div class="row"></div><div class="row"></div><div class="row"></div>
     <div class="row"></div><div class="row"></div><div class="row"></div>
+
+    <!-- A3 题目插图：从「えらんで ください」那行到「×［暗的］」那行的右侧（第 13〜16 行） -->
+    <div class="pic" style="top: calc(9.4mm * 13 + 1mm); height: calc(9.4mm * 4 - 2mm); width: 37mm; right: 10mm;">
+      <img src="Page001_A3插图.png" alt="A3 插图">
+    </div>
   </div>
 </div>
 </body>
