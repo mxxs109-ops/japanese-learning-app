@@ -91,8 +91,10 @@
   .tag { font-size: 11px; padding: 2px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); }
   .tag.bad { background: var(--bad-soft); color: var(--bad); }
   .instr { font-size: 13px; color: var(--muted); line-height: 1.9; margin: 0 0 28px; }
-  .sentence { font-size: 26px; text-align: center; margin: 8px 0 34px; line-height: 1.7; }
+  .sentence { font-size: 26px; text-align: center; margin: 8px 0 34px; line-height: 1.7; word-break: keep-all; overflow-wrap: anywhere; }
   .sentence u { text-decoration: none; border-bottom: 2px solid var(--ink); padding: 0 2px; }
+  .qimg { text-align: center; margin: -14px 0 26px; }
+  .qimg img { max-width: 100%; max-height: 240px; border-radius: 10px; background: #fff; }
   rt { font-size: 0.45em; }
   .opts { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   .opt { border: 1px solid var(--line); background: var(--card); color: var(--ink); font: inherit; font-size: 18px;
@@ -168,7 +170,7 @@
   var STORE_KEY = 'jp-daily-v1';
   var REMOTE_KEY = 'jp-daily-remote-v1';
   // 改了 index.html / srs.js / install.bat 就把这个数 +1，并把 version.txt 改成同一个数
-  var APP_VERSION = 4;
+  var APP_VERSION = 5;
   var GH_API = 'https://api.github.com/repos/mxxs109-ops/japanese-learning-app/contents/';
   var INSTALL_CMD = 'curl -sL -o "%TEMP%\\jla.bat" https://raw.githubusercontent.com/mxxs109-ops/japanese-learning-app/main/install.bat && "%TEMP%\\jla.bat"';
 
@@ -357,6 +359,14 @@
     return best;
   }
 
+  // 题目插图：先读本地 images/，本地没有（旧安装）就改从 GitHub 读
+  function imageHTML(q) {
+    if (typeof q.image !== 'string' || !/^images\/[\w.\-]+$/.test(q.image)) return '';
+    var remote = 'https://raw.githubusercontent.com/mxxs109-ops/japanese-learning-app/main/' + q.image;
+    return '<div class="qimg"><img src="' + esc(q.image) + '" alt="" data-remote="' + esc(remote) + '"' +
+      ' onerror="if(this.dataset.remote){this.src=this.dataset.remote;this.dataset.remote=\'\';}else{this.parentNode.style.display=\'none\';}"></div>';
+  }
+
   function quizHTML() {
     var s = session;
     if (s.idx >= s.queue.length) return summaryHTML();
@@ -368,7 +378,7 @@
       '<span class="sec">' + esc(q.section) + '</span>' + tag +
       '<span class="progress">' + (s.idx + 1) + ' / ' + s.queue.length + '</span></div>' +
       '<p class="instr">' + esc(q.instruction) + '</p>' +
-      '<div class="sentence">' + sentenceHTML(q.sentence) + '</div><div class="opts">';
+      '<div class="sentence">' + sentenceHTML(q.sentence) + '</div>' + imageHTML(q) + '<div class="opts">';
     q.options.forEach(function (o, i) {
       var cls = '';
       if (ans != null) cls = i === q.answer ? 'ok' : (i === ans ? 'bad' : 'dim');

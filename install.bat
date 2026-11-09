@@ -26,6 +26,7 @@ copy /y "%TMPX%\japanese-learning-app-main\questions.js" "%DEST%\" >nul
 copy /y "%TMPX%\japanese-learning-app-main\srs.js"       "%DEST%\" >nul
 copy /y "%TMPX%\japanese-learning-app-main\icon.ico"     "%DEST%\" >nul
 copy /y "%TMPX%\japanese-learning-app-main\icon.png"     "%DEST%\" >nul
+if exist "%TMPX%\japanese-learning-app-main\images" xcopy /e /i /y /q "%TMPX%\japanese-learning-app-main\images" "%DEST%\images" >nul
 rmdir /s /q "%TMPX%"
 del /q "%ZIP%"
 
