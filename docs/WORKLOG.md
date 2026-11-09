@@ -9,6 +9,8 @@
 4. 句子换行：`word-break: keep-all` + `overflow-wrap: anywhere`，只在空格处断（原来断成「できませ／ん。」）
 5. 实测（headless Edge，自动点「开始练习」）：带图本地 ✅；删掉 images 文件夹 → 图从 GitHub 加载 ✅（raw 200，91969B）；
    install.bat 回读 crlf 59 / lf_only 0 / ctrl 0 / nonascii 0。手机宽度截图被切边，判断是无头窗口最小宽度的假象，**未验证**
+6. 补 Day3 N4〜N1：レシート / 助けて（{困|こま} 注音）/ 収集 / 推測；うるさい、推測 的解析换成他发来的官方版（替掉我写的）。
+   node 校验 12 题 id 不重复、5 道答案序号对；页面今日队列「1 / 5」。只改题库，APP_VERSION 不变（5）
 
 ## 2026-11-06（周五）· 建项目
 
