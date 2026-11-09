@@ -11,8 +11,8 @@ prof = pathlib.Path(os.environ.get('TEMP', '.')) / 'notes_pdf_profile'
 
 ok = True
 VERSIONS = (
-    ('theme=photo',         '照片配色'),
-    ('theme=white',         '白底'),
+    ('theme=photo&clean=0', '照片配色'),
+    ('theme=white&clean=0', '白底'),
     ('theme=photo&clean=1', '照片配色_隐藏笔记'),
     ('theme=white&clean=1', '白底_隐藏笔记'),
 )

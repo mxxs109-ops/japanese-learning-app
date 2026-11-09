@@ -5,8 +5,9 @@
 <title>Page 001</title>
 <!--
   手写笔记 Page 001 的电子版。
+    默认 = 白底 + 隐藏笔记（直接双击打开就是这个）
     ?theme=photo  照片配色（纸色 + 金棕 / 红墨水）      ?theme=white  白底淡线（金棕 → 黑，红 → 正蓝）
-    &clean=1      隐藏笔记：不显示正确答案的圈、×、对调括号、中文注释（题目照旧）
+    &clean=0      显示笔记（正确答案的圈、×、对调括号、中文注释）；clean=1 隐藏笔记，题目照旧
   屏幕上右上角有切换按钮；导出 PDF：tools/make_notes_pdf.py（4 个版本）
   每行 = 本子上的一条横线；行数、换行照手写稿
   标了 class="note" 的都是「笔记」，隐藏笔记时消失
@@ -66,8 +67,12 @@
   .gap { display: inline-block; width: 13mm; }
 
   /* 题目插图（原图原色，不跟墨水颜色） */
-  .pic { position: absolute; right: 12mm; display: flex; align-items: center; justify-content: center; }
+  /* 占 A3 的第 13〜15 行（えらんで ください / 句子 / 选项），上下贴横线，不多占行。
+     隐藏笔记时紧跟在文字右边；显示笔记时让开「这里很吵」那条注释 */
+  .pic { position: absolute; top: calc(9.4mm * 13 + 0.9mm); height: calc(9.4mm * 3 - 1.5mm);
+         left: 134mm; width: 52mm; display: flex; align-items: center; justify-content: flex-start; }
   .pic img { max-width: 100%; max-height: 100%; display: block; border-radius: 1.5mm; }
+  html:not(.clean) .pic { left: 158mm; width: 42mm; }
 
   /* ---- 隐藏笔记 ---- */
   .clean .note { visibility: hidden; }
@@ -111,13 +116,14 @@
       b.classList.toggle('on', b.dataset.t ? b.dataset.t === view.t : b.dataset.c === view.c);
     });
     var q = [];
-    if (view.t === 'white') q.push('theme=white');
-    if (view.c === '1') q.push('clean=1');
+    if (view.t === 'photo') q.push('theme=photo');
+    if (view.c === '0') q.push('clean=0');
     try { history.replaceState(null, '', location.pathname + (q.length ? '?' + q.join('&') : '')); } catch (e) {}
   }
+  // 默认：白底 + 隐藏笔记（他 11-09 定）
   var p = new URLSearchParams(location.search);
-  view.t = p.get('theme') === 'white' ? 'white' : 'photo';
-  view.c = p.get('clean') === '1' ? '1' : '0';
+  view.t = p.get('theme') === 'photo' ? 'photo' : 'white';
+  view.c = p.get('clean') === '0' ? '0' : '1';
   apply();
   document.querySelector('.switch').addEventListener('click', function (e) {
     var b = e.target.closest('button'); if (!b) return;
@@ -150,7 +156,7 @@
     <!-- A2 -->
     <div class="row gold">A2：<span class="under">＿＿</span>の<span class="s"></span>ことばは<span class="s"></span>どう<span class="s"></span>かきますか。1・2・3・4から<span class="s"></span>いちばん<span class="s"></span>いい<span class="s"></span>ものを</div>
     <div class="row gold">ひとつ<span class="s"></span>えらんで<span class="s"></span>ください。</div>
-    <div class="row in1"><span class="red">あの<span class="s"></span>ほてるは<span class="s"></span>ゆうめいです。</span><span class="s"></span><span class="gold zh note">［hotel］［那家酒店很有名］</span></div>
+    <div class="row in1"><span class="red">あの<span class="s"></span><span class="wavy">ほてる</span>は<span class="s"></span>ゆうめいです。</span><span class="s"></span><span class="gold zh note">［hotel］［那家酒店很有名］</span></div>
     <div class="row red">
       <span class="opt"><span class="num">1.</span>ホ<span class="x">ラ</span>ル</span>
       <span class="opt"><span class="circ">2<span class="dot">.</span></span>ホテル</span>
@@ -185,7 +191,7 @@
     <div class="row"></div><div class="row"></div><div class="row"></div>
 
     <!-- A3 题目插图：从「えらんで ください」那行到「×［暗的］」那行的右侧（第 13〜16 行） -->
-    <div class="pic" style="top: calc(9.4mm * 13 + 1mm); height: calc(9.4mm * 4 - 2mm); width: 37mm; right: 10mm;">
+    <div class="pic">
       <img src="Page001_A3插图.png" alt="A3 插图">
     </div>
   </div>
