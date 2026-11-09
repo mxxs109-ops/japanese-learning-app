@@ -84,6 +84,15 @@
   /* 答题 */
   .qtop { display: flex; align-items: center; gap: 10px; margin-bottom: 18px; }
   .lv { font-weight: 800; font-size: 13px; color: #fff; padding: 3px 9px; border-radius: 7px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 4px; }
+  .chip { border: 1px solid var(--line); background: var(--card); color: var(--ink); font: inherit; font-size: 13px;
+          font-weight: 600; padding: 6px 15px; border-radius: 999px; cursor: pointer; }
+  .chip.on { background: var(--ink); border-color: var(--ink); color: var(--bg); }
+  .chip.on.N5 { background: var(--n5); border-color: var(--n5); color: #fff; }
+  .chip.on.N4 { background: var(--n4); border-color: var(--n4); color: #fff; }
+  .chip.on.N3 { background: #856ea5; border-color: #856ea5; color: #fff; }
+  .chip.on.N2 { background: #e68329; border-color: #e68329; color: #fff; }
+  .chip.on.N1 { background: #5dae98; border-color: #5dae98; color: #fff; }
   .lv.N5 { background: var(--n5); } .lv.N4 { background: var(--n4); }
   .lv.N3 { background: #856ea5; } .lv.N2 { background: #e68329; } .lv.N1 { background: #5dae98; }
   .sec { font-size: 13px; color: var(--muted); }
@@ -170,7 +179,7 @@
   var STORE_KEY = 'jp-daily-v1';
   var REMOTE_KEY = 'jp-daily-remote-v1';
   // 改了 index.html / srs.js / install.bat 就把这个数 +1，并把 version.txt 改成同一个数
-  var APP_VERSION = 5;
+  var APP_VERSION = 6;
   var GH_API = 'https://api.github.com/repos/mxxs109-ops/japanese-learning-app/contents/';
   var INSTALL_CMD = 'curl -sL -o "%TEMP%\\jla.bat" https://raw.githubusercontent.com/mxxs109-ops/japanese-learning-app/main/install.bat && "%TEMP%\\jla.bat"';
 
@@ -319,7 +328,6 @@
     var nav = document.getElementById('nav');
     nav.querySelectorAll('button').forEach(function (b) {
       b.classList.toggle('on', b.dataset.v === (session ? '' : view));
-      if (b.dataset.v === 'wrong') b.innerHTML = '错题集' + (c.wrong ? '<span class="badge">' + c.wrong + '</span>' : '');
     });
     var el = document.getElementById('view');
     if (session) el.innerHTML = quizHTML();
@@ -428,11 +436,25 @@
     return h + '</div>';
   }
 
+  // 题库级别筛选（可多选；空 = 全部）。只管题库列表和「复习」，不影响「今日」
+  var LEVELS = ['N5', 'N4', 'N3', 'N2', 'N1'];
+  function levelOK(q) { var L = state.levels || []; return !L.length || L.indexOf(q.level) >= 0; }
+  function chipsHTML() {
+    var L = state.levels || [];
+    var h = '<div class="chips"><button class="chip' + (L.length ? '' : ' on') + '" data-act="lv" data-lv="ALL">全部</button>';
+    LEVELS.forEach(function (lv) {
+      h += '<button class="chip ' + lv + (L.indexOf(lv) >= 0 ? ' on' : '') + '" data-act="lv" data-lv="' + lv + '">' + lv + '</button>';
+    });
+    return h + '</div>';
+  }
+
   function allHTML() {
-    var reviewable = Q.filter(function (q) { return q.date <= TODAY; });
-    var h = '<div class="card"><div class="head"><h3>题库 · ' + Q.length + '</h3>' +
-      (reviewable.length ? '<button class="btn" data-act="free-done">复习</button>' : '') + '</div>';
-    Q.slice().sort(function (a, b) { return a.date < b.date ? 1 : -1; }).forEach(function (q) {
+    var shown = Q.filter(levelOK);
+    var reviewable = shown.filter(function (q) { return q.date <= TODAY; });
+    var h = '<div class="card"><div class="head"><h3>题库 · ' + shown.length + '</h3>' +
+      (reviewable.length ? '<button class="btn" data-act="free-done">复习</button>' : '') + '</div>' + chipsHTML();
+    if (!shown.length) return h + '<div class="empty">这个级别还没有题</div></div>';
+    shown.slice().sort(function (a, b) { return a.date < b.date ? 1 : -1; }).forEach(function (q) {
       var r = rec(q.id), locked = q.date > TODAY, st;
       if (locked) st = whenText(q.date) + '解锁';
       else st = { 'new': '未做', learning: '错题 ' + r.streak + '/' + SRS.MAX_STREAK, mastered: '已掌握', graduated: '已毕业' }[r.status];
@@ -464,7 +486,15 @@
     else if (act === 'go-all') { view = 'all'; render(); }
     else if (act === 'free-one') startSession([t.dataset.id], 'free');
     else if (act === 'free-wrong') startSession(Q.filter(function (q) { return rec(q.id).status === 'learning'; }).map(function (q) { return q.id; }), 'free');
-    else if (act === 'free-done') startSession(shuffle(Q.filter(function (q) { return q.date <= TODAY; }).map(function (q) { return q.id; })), 'free');
+    else if (act === 'free-done') startSession(shuffle(Q.filter(function (q) { return q.date <= TODAY && levelOK(q); }).map(function (q) { return q.id; })), 'free');
+    else if (act === 'lv') {
+      var lv = t.dataset.lv, L = (state.levels || []).slice(), i = L.indexOf(lv);
+      if (lv === 'ALL') L = [];
+      else if (i >= 0) L.splice(i, 1);
+      else if (LEVELS.indexOf(lv) >= 0) L.push(lv);
+      if (L.length === LEVELS.length) L = [];   // 五个全选 = 全部
+      state.levels = L; save(); render();
+    }
     else if (act === 'pick' && session && session.answer == null) {
       var q = QMAP[session.queue[session.idx]], i = Number(t.dataset.i), ok = i === q.answer;
       // 今日练习里，只有"到期"的错题和新题按 daily 计；其他按手动复习计
