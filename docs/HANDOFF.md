@@ -107,7 +107,17 @@ curl / tar 写死 `%SystemRoot%\System32\` 的版本：装了 Git 的机器上�
   上下贴横线不多占行，紧跟文字右边；显示笔记时右移让开中文注释。题目句子里被考的词用红色波浪线（新しい、ほてる）
   **Page001 已抄完**（11-10，A1〜A4：新しい / ほてる / うるさい / デパート）。A4 选项里的波浪线（かいもの 等）隐藏笔记时也保留——
   他还没表态，若要算笔记就加 `note`。⚠️ `note` 只能挂在行内 span 上，挂在整行 `.row` 上会连横线一起藏掉。
-  下一页 = 新建 `notes/Page002/`，照 Page001 的结构；他发照片后：放原稿照片 → 写 HTML → 导 4 个 PDF → 两处同步（md5 比对）
+  下一页 = 新建 `notes/Page002/`，照 Page001 的结构；他发照片后：放原稿照片 → 写 HTML（要读的加 `data-say`）→
+  导 4 个 PDF → **生成朗读** → `notes/pages.js` 加一行 → 整个 `notes/` 同步到桌面 `日本語Daily_手写笔记\`（md5 比对）
+- **笔记朗读**（11-10）：VOICEVOX 0.26.1 在 `D:\A030_VOICEVOX\windows-cpu\run.exe`（脚本会自己起、用完关）。
+  生成：`D:\A030_VOICEVOX\venv\Scripts\python.exe tools\make_notes_audio.py notes\PageNNN\PageNNN.html [--prune]`
+  - 只读 `data-say` 标的元素；`.note`（中文笔记）/`.nosay`（A1：）/`<rt>` 不读；`.under`（＿＿）念「かせん」
+  - 产物 `PageNNN/audio/`：`<缓存号>.ogg/.json` + `manifest.js`（页面读）+ `kana.txt`（**每次生成后看这个核对读音**）+ `voices.txt`（全部音色 id）
+  - 缓存：文字/音色/引擎版本/`GEN` 没变就复用。🔴 改了送进引擎的方式（空格、停顿、读法替换）必须把 `GEN` +1
+  - 默认 6 个音色在脚本 `DEFAULT_VOICES`；用 `--voices 2,3` 指定。页面上要显示「音声：VOICEVOX:角色名」（VOICEVOX 角色使用条款）
+  - 待他定：试听后留哪几个音色；两个男声（青山龍星、玄野武宏）Whisper 听出词间多「お/あ」
+- **翻书**（11-10）：`notes/book.html`，页清单 `notes/pages.js`。宽屏对开 / 窄屏单页，带封面封底；主题/笔记/朗读在书的工具栏上。
+  「读完一页自动翻页接着读」还没用两页实测过
 - 题库级别筛选（11-09，APP_VERSION 6）：可多选，存 `state.levels`；**只管题库列表和「复习」，「今日」不筛**（他拍板：
   否则没选的级别到期错题永远不出现）。「错题集」标签不显示红点数字（他要求）
 - 微信结果已补录：Day1 新しい 对、通って 错（错题集，11-13 再出现）；Day2 五道全对 → 已掌握
