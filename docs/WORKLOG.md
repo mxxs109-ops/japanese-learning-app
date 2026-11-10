@@ -49,6 +49,19 @@
     工具栏发 postMessage 给页；页读完回 `done` → 书翻页接着读。
     实测（headless Edge）：封面/对开/单页截图正常；点「全部朗读」→ 第 1 页回报 playing=true。
     ⚠️ **「读完自动翻到下一页」没测到**（现在只有 Page001 一页），等 Page002 来了实测
+12. **翻页重做**（他嫌第一版「丑陋、没对齐」，要右下角卷角那种丝滑翻页）：
+    - 搜索结论：StPageFlip 仍是首选（MIT，卷角+阴影+拖拽）；常见做法是把页面先渲染成图交给它的**画布模式**（PDF.js 渲染 → StPageFlip）。
+      第一版用的是 HTML 模式（翻 iframe），又卡又错位
+    - 现在：`tools/make_notes_pdf.py` 顺带出 `PageNNN/flip/<white|photo>_<0|1>.png`（1588×2246，页面 `?shot=1` 截图模式）；
+      book.html 用 `loadFromImages` 在画布上翻；**停稳**（state=read）时在看得到的页上叠真页面 iframe（朗读/高亮），一动就藏
+    - 🐞 三个坑：① 画布模式库只在 `<canvas>` 上听按下 → 盖在上面的书角把手要把 mousedown/touchstart **转发给 canvas**，否则拖不动；
+      ② 库 `clear()` 把整块画布涂白 → 书两侧白边，本地副本改成 `clearRect`（文件头注明 PATCH）；
+      ③ 工具栏字体加载后变矮、书区变大，库只听 window resize → 画布被拉伸、真页面对不齐 → ResizeObserver + `getUI().update()`
+    - 🐞 测试本身也骗过我一次：`--screenshot` 会在截图时改视口，排版和截图不是同一尺寸 → 改用 CDP 固定视口（Emulation.setDeviceMetricsOverride）
+      执行操作 + 截图（scratch 里的 cdp.py），才看到真实画面
+    - 实测（CDP，1400×950 与 600×1000）：停稳时真页面与图逐像素对齐（x 87.7 起，612×866）；右下角悬停卷角 ✅；
+      按住右下角拖过书脊 → 翻到下一页（日志 down→user_fold→flip:3）✅；拖到一半截图是真实卷页 ✅；
+      切照片配色+显示笔记后图跟着换 ✅；停稳点朗读 playing=true ✅；竖屏单页对齐 ✅
 
 ## 2026-11-09（周一）· Day3
 

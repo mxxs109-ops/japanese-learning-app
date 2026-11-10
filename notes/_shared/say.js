@@ -258,9 +258,11 @@
   }
   // ---------- 装在书里（book.html 用 iframe 打开 PageNNN.html?embed=1）----------
   var EMBED = /[?&]embed=1/.test(location.search + ' ' + navUrl) && window.parent !== window;
+  // ?shot=1：给 tools/make_notes_pdf.py 截翻页用的图（只要纸面，不要按钮和灰底）
+  var SHOT = /[?&]shot=1/.test(location.search + ' ' + navUrl);
   function tell(msg) { if (EMBED) try { window.parent.postMessage(msg, '*'); } catch (e) {} }
   function embedSetup() {
-    if (!EMBED) return;
+    if (!EMBED && !SHOT) return;
     var s = document.createElement('style');
     s.textContent = 'html,body{background:transparent!important;margin:0!important;padding:0!important;overflow:hidden}' +
       '.page{margin:0!important;box-shadow:none!important}.switch{display:none!important}';
@@ -271,6 +273,7 @@
     function fit() { if (window.innerWidth !== lastW) { lastW = window.innerWidth; document.body.style.zoom = lastW / PAGE_PX; } }
     // 书页大小由翻页库改，resize 事件不一定到得了 iframe 里 → 定时对一下
     fit(); window.addEventListener('resize', fit); setInterval(fit, 300);
+    if (!EMBED) return;
     function click(sel) { var b = document.querySelector(sel); if (b) b.click(); }
     window.addEventListener('message', function (e) {
       var m = e.data || {};

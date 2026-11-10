@@ -5,16 +5,20 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>日本語 手書きノート</title>
 <!--
-  手写笔记装订成书：拖书角 / 点书页边缘 / 键盘 ← → 翻页；宽屏两页对开，窄屏单页。
-  每一页是 PageNNN/PageNNN.html?embed=1（iframe），页的清单在 pages.js。
-  翻页效果：notes/_shared/page-flip.browser.js（StPageFlip 2.0.7，MIT，已下载到本地，不联网也能用）。
-  朗读：工具栏的按钮发消息给页里的 say.js；一页读完自动翻页接着读。
+  手写笔记装订成书。
+  翻页：StPageFlip 2.0.7（MIT，notes/_shared/page-flip.browser.js）的「画布模式」——
+    每页事先渲染成整页图（PageNNN/flip/<white|photo>_<0|1>.png，由 tools/make_notes_pdf.py 生成），
+    卷角、阴影、拖拽都在画布上画，所以顺滑、对得齐。
+  书停稳后，在当前看得到的页上叠一层真页面（PageNNN.html?embed=1 的 iframe），用来点句子朗读、逐词高亮；
+    它和图是同一个 HTML 生成的，看起来一样。一开始拖页 / 卷角，真页面就藏起来，露出下面的图。
+  鼠标移到书页的四个角会卷起一点（书角），按住拖就翻；也可以点两侧、按 ← →、点 ◀ ▶。
+  页的清单在 pages.js。
 -->
 <style>
-  :root { --bar: #ffffff; --ink: #1f1f1f; --muted: #6b6b6b; --desk: #d9d4cb; --desk2: #c9c2b6; }
+  :root { --bar: #ffffff; --ink: #1f1f1f; --muted: #6b6b6b; --desk: #d9d4cb; --desk2: #c4bcae; }
   * { box-sizing: border-box; }
   html, body { margin: 0; height: 100%; }
-  body { background: radial-gradient(ellipse at 50% 40%, var(--desk), var(--desk2)); color: var(--ink);
+  body { background: radial-gradient(ellipse at 50% 45%, var(--desk), var(--desk2)); color: var(--ink);
          font-family: "Microsoft YaHei", "Yu Gothic", sans-serif; overflow: hidden; }
 
   .bar { position: fixed; left: 0; right: 0; top: 0; z-index: 20; display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
@@ -28,24 +32,16 @@
   .credit { font-size: 12px; color: var(--muted); }
 
   .stage { position: absolute; left: 12px; right: 12px; bottom: 14px; }
-  #book { width: 100%; height: 100%; }
-  .leaf { background: #fff; overflow: hidden; }
-  .leaf iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; display: block; background: #fff; }
-  /* 书页外侧边缘的「把手」：iframe 会吃掉鼠标，翻页要从这里拖（书角最顺手） */
-  .grip { position: absolute; top: 0; bottom: 0; width: 9%; z-index: 3; cursor: grab; }
-  .grip.l { left: 0; } .grip.r { right: 0; }
-  .grip:hover { background: linear-gradient(to var(--dir, right), rgba(0,0,0,.06), transparent); }
-  .grip.r:hover { --dir: left; }
-  body.dragging iframe { pointer-events: none; }
-
-  .cover { background: #24324a linear-gradient(135deg, rgba(255,255,255,.07), rgba(0,0,0,.18)); color: #f3ead6; }
-  .cover .in { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
-  .cover .t1 { font-family: "Yu Mincho", "MS Mincho", serif; font-size: 3.2em; letter-spacing: .12em; }
-  .cover .t2 { font-family: "Yu Mincho", "MS Mincho", serif; font-size: 1.5em; letter-spacing: .3em; margin-top: .6em; }
-  .cover .t3 { margin-top: 2.4em; font-size: .9em; opacity: .7; letter-spacing: .1em; }
-  .cover .frame { position: absolute; inset: 6%; border: 1px solid rgba(243,234,214,.35); border-radius: 4px; pointer-events: none; }
-  .blank { background: #f4f1ea; }
-  .back { background: #24324a linear-gradient(225deg, rgba(255,255,255,.05), rgba(0,0,0,.2)); }
+  #book { position: relative; width: 100%; height: 100%; }
+  /* 停稳时叠在图上的真页面 */
+  .live { position: absolute; border: 0; display: none; background: transparent; z-index: 2; }
+  .live.on { display: block; }
+  body.dragging .live { pointer-events: none; }
+  /* 书角 / 书边的「把手」：真页面会吃掉鼠标，这些透明块盖在角上，鼠标在这里才能卷角、拖页 */
+  .grip { position: absolute; z-index: 3; display: none; }
+  .grip.on { display: block; }
+  .grip.corner { cursor: grab; }
+  .grip.edge { cursor: pointer; }
   @media print { .bar { display: none; } }
 </style>
 </head>
@@ -77,81 +73,179 @@
   function load(k, d) { try { var v = localStorage.getItem('book-' + k); return v == null ? d : v; } catch (e) { return d; } }
   function keep(k, v) { try { localStorage.setItem('book-' + k, v); } catch (e) {} }
   var view = { t: load('theme', 'white'), c: load('clean', '1') };     // 默认白底 + 隐藏笔记（和单页一致）
+  var IW = 1588, IH = 2246;                                            // 整页图尺寸（A4 × 2）
 
-  // ---------- 组装书页：封面 + 各页 (+ 空白页凑双数) + 封底 ----------
-  var pages = (window.NOTE_PAGES || []).slice();
-  var book = document.getElementById('book');
-  var leaves = [], frames = [];        // leaves[i] 对应书的第 i 页；frames[i] = 该页的 iframe（封面/空白为 null）
-  function leaf(cls, density) {
-    var d = document.createElement('div');
-    d.className = 'leaf ' + (cls || '');
-    if (density) d.setAttribute('data-density', density);
-    book.appendChild(d); leaves.push(d); frames.push(null);
-    return d;
+  // ---------- 封面 / 空白页 / 封底：用画布现画 ----------
+  function drawPage(kind) {
+    var c = document.createElement('canvas'); c.width = IW; c.height = IH;
+    var g = c.getContext('2d');
+    if (kind === 'blank') { g.fillStyle = '#f4f1ea'; g.fillRect(0, 0, IW, IH); return c.toDataURL('image/png'); }
+    var gr = g.createLinearGradient(0, 0, IW, IH);
+    gr.addColorStop(0, kind === 'cover' ? '#33445f' : '#2b3a52'); gr.addColorStop(1, '#1b2537');
+    g.fillStyle = gr; g.fillRect(0, 0, IW, IH);
+    // 布纹
+    g.globalAlpha = 0.05; g.fillStyle = '#fff';
+    for (var y = 0; y < IH; y += 6) g.fillRect(0, y, IW, 2);
+    g.globalAlpha = 1;
+    // 书脊一侧的压痕
+    var sx = kind === 'cover' ? 0 : IW - 70, sg = g.createLinearGradient(sx, 0, sx + 70, 0);
+    sg.addColorStop(kind === 'cover' ? 0 : 1, 'rgba(0,0,0,.35)'); sg.addColorStop(kind === 'cover' ? 1 : 0, 'rgba(0,0,0,0)');
+    g.fillStyle = sg; g.fillRect(sx, 0, 70, IH);
+    if (kind === 'cover') {
+      g.strokeStyle = 'rgba(243,234,214,.35)'; g.lineWidth = 3; g.strokeRect(110, 140, IW - 220, IH - 280);
+      g.fillStyle = '#f3ead6'; g.textAlign = 'center'; g.textBaseline = 'middle';
+      g.font = '220px "Yu Mincho","MS Mincho",serif'; g.fillText('日本語', IW / 2, IH * 0.42);
+      g.font = '96px "Yu Mincho","MS Mincho",serif'; spaced(g, '手書きノート', IW / 2, IH * 0.52, 30);
+      g.globalAlpha = 0.7; g.font = '52px "Segoe UI","Yu Gothic",sans-serif'; spaced(g, 'JLPT 真題 · Page 001 〜', IW / 2, IH * 0.61, 6);
+      g.globalAlpha = 1;
+    }
+    return c.toDataURL('image/png');
   }
-  var cv = leaf('cover', 'hard');
-  cv.innerHTML = '<div class="frame"></div><div class="in"><div class="t1">日本語</div><div class="t2">手書きノート</div><div class="t3">JLPT 真題 · Page 001 〜</div></div>';
-  pages.forEach(function (name) {
-    var d = leaf('');
-    var f = document.createElement('iframe');
-    f.src = name + '/' + name + '.html?embed=1' + (view.t === 'photo' ? '&theme=photo' : '') + (view.c === '0' ? '&clean=0' : '');
-    f.title = name;
-    d.appendChild(f);
-    frames[frames.length - 1] = f;
-  });
-  if (pages.length % 2 === 1) leaf('blank');
-  leaf('back', 'hard');
-  leaves.forEach(function (d) {                // 每页两侧的拖拽把手
-    ['l', 'r'].forEach(function (s) { var g = document.createElement('div'); g.className = 'grip ' + s; d.appendChild(g); });
-  });
+  function spaced(g, s, cx, y, sp) {             // 带字距的居中文字
+    var w = 0, i; for (i = 0; i < s.length; i++) w += g.measureText(s[i]).width + (i ? sp : 0);
+    var x = cx - w / 2; g.textAlign = 'left';
+    for (i = 0; i < s.length; i++) { g.fillText(s[i], x, y); x += g.measureText(s[i]).width + sp; }
+    g.textAlign = 'center';
+  }
 
-  // ---------- 尺寸：A4 比例，塞满工具栏以下的空间 ----------
-  var bar = document.querySelector('.bar'), stage = document.getElementById('stage');
-  // 书本区域 = 工具栏以下整块；库在里面按 A4 比例自己缩放、居中。宽度不够放两页（每页 < 300px）就自动单页
+  // ---------- 书页：封面 + 各页 (+ 空白页凑双数) + 封底 ----------
+  var pages = (window.NOTE_PAGES || []).slice();
+  var slots = [{ kind: 'cover' }];               // slots[i] = 书的第 i 页
+  pages.forEach(function (name) { slots.push({ kind: 'page', name: name }); });
+  if (pages.length % 2 === 1) slots.push({ kind: 'blank' });
+  slots.push({ kind: 'back' });
+  var fixedImg = { cover: drawPage('cover'), blank: drawPage('blank'), back: drawPage('back') };
+  function urls() {
+    return slots.map(function (s) {
+      return s.kind === 'page' ? s.name + '/flip/' + view.t + '_' + view.c + '.png' : fixedImg[s.kind];
+    });
+  }
+
+  var book = document.getElementById('book'), bar = document.querySelector('.bar'), stage = document.getElementById('stage');
   function layout() { stage.style.top = (bar.offsetHeight + 6) + 'px'; }
   layout();
   var flip = new St.PageFlip(book, {
     width: 210, height: 297, size: 'stretch',
     minWidth: 300, maxWidth: 2000, minHeight: 100, maxHeight: 2828,
-    showCover: true, usePortrait: true, drawShadow: true, maxShadowOpacity: 0.45,
-    flippingTime: 900, mobileScrollSupport: false, startPage: Number(load('page', '0')) || 0
+    showCover: true, usePortrait: true, drawShadow: true, maxShadowOpacity: 0.55,
+    showPageCorners: true, flippingTime: 1000, mobileScrollSupport: false,
+    startPage: Math.min(Number(load('page', '0')) || 0, slots.length - 1)
   });
-  flip.loadFromHTML(leaves);
-  window.addEventListener('resize', function () { layout(); });
+  flip.loadFromImages(urls());
 
-  // 从把手开始拖：期间让 iframe 不吃鼠标，否则拖到页中间就断了
-  book.addEventListener('mousedown', function () { document.body.classList.add('dragging'); }, true);
-  book.addEventListener('touchstart', function () { document.body.classList.add('dragging'); }, true);
-  ['mouseup', 'touchend', 'blur'].forEach(function (ev) {
-    window.addEventListener(ev, function () { setTimeout(function () { document.body.classList.remove('dragging'); }, 50); });
+  // ---------- 叠在上面的真页面 + 书角把手 ----------
+  var frames = slots.map(function (s) {
+    if (s.kind !== 'page') return null;
+    var f = document.createElement('iframe');
+    f.className = 'live'; f.title = s.name;
+    f.src = s.name + '/' + s.name + '.html?embed=1' + (view.t === 'photo' ? '&theme=photo' : '') + (view.c === '0' ? '&clean=0' : '');
+    book.appendChild(f);
+    return f;
   });
+  // 画布模式下库只在 <canvas> 上听「按下」（移动/松开听 window）。把手盖在画布上面，
+  // 所以把手上的按下要原样转发给画布，库才会开始拖页；之后的移动/松开本来就在 window 上
+  var canvas = book.querySelector('canvas');
+  function forwardDown(e) {
+    if (!canvas) return;
+    if (e.type === 'mousedown') {
+      canvas.dispatchEvent(new MouseEvent('mousedown', { clientX: e.clientX, clientY: e.clientY, button: e.button, buttons: e.buttons, bubbles: true, cancelable: true }));
+    } else if (e.touches && e.touches[0] && window.Touch) {
+      var t = e.touches[0];
+      var nt = new Touch({ identifier: t.identifier, target: canvas, clientX: t.clientX, clientY: t.clientY, pageX: t.pageX, pageY: t.pageY });
+      canvas.dispatchEvent(new TouchEvent('touchstart', { touches: [nt], targetTouches: [nt], changedTouches: [nt], bubbles: true, cancelable: true }));
+    }
+    e.preventDefault();
+  }
+  var grips = [];
+  for (var gi = 0; gi < 8; gi++) {
+    var gd = document.createElement('div');
+    gd.addEventListener('mousedown', forwardDown);
+    gd.addEventListener('touchstart', forwardDown, { passive: false });
+    book.appendChild(gd); grips.push(gd);
+  }
 
-  // ---------- 页码 + 翻页 ----------
-  var pn = document.getElementById('pn');
   function visible() {                           // 当前看得到的书页序号
     var i = flip.getCurrentPageIndex();
     if (flip.getOrientation() === 'portrait' || i === 0) return [i];
     if (i % 2 === 0) i -= 1;                     // 对开时左页是奇数
-    return [i, i + 1].filter(function (k) { return k >= 0 && k < leaves.length; });
+    return [i, i + 1].filter(function (k) { return k >= 0 && k < slots.length; });
   }
+  function pageBox(k) {                          // 第 k 页在 #book 里的位置
+    var r = flip.getBoundsRect(), x;
+    if (flip.getOrientation() === 'portrait') x = r.left + r.pageWidth;
+    else x = (k === 0 || k % 2 === 0) ? r.left + r.pageWidth : r.left;
+    return { x: x, y: r.top, w: r.pageWidth, h: r.height };
+  }
+  var resting = true;
+  function place() {
+    var vis = visible();
+    frames.forEach(function (f, k) {
+      if (!f) return;
+      var on = resting && vis.indexOf(k) >= 0;
+      if (on) { var b = pageBox(k); f.style.left = b.x + 'px'; f.style.top = b.y + 'px'; f.style.width = b.w + 'px'; f.style.height = b.h + 'px'; }
+      f.classList.toggle('on', on);
+    });
+    // 把手：书的左右两边，每边上下两个角 + 中间一条边
+    var r = flip.getBoundsRect(), port = flip.getOrientation() === 'portrait';
+    var L = port ? r.left + r.pageWidth : r.left, R = r.left + 2 * r.pageWidth;
+    var cs = Math.max(40, r.pageWidth * 0.14), ew = Math.max(18, r.pageWidth * 0.05);
+    var spots = [
+      [L, r.top, cs, cs, 'corner'], [L, r.top + r.height - cs, cs, cs, 'corner'], [L, r.top + cs, ew, r.height - 2 * cs, 'edge'],
+      [R - cs, r.top, cs, cs, 'corner'], [R - cs, r.top + r.height - cs, cs, cs, 'corner'], [R - ew, r.top + cs, ew, r.height - 2 * cs, 'edge']
+    ];
+    grips.forEach(function (g, i) {
+      var s = spots[i];
+      if (!s) { g.className = 'grip'; return; }
+      g.className = 'grip on ' + s[4];
+      g.style.left = s[0] + 'px'; g.style.top = s[1] + 'px'; g.style.width = s[2] + 'px'; g.style.height = s[3] + 'px';
+    });
+  }
+  flip.on('changeState', function (e) {
+    var was = resting;
+    resting = e.data === 'read';
+    if (!resting) document.body.classList.add('dragging');
+    if (resting !== was) setTimeout(place, resting ? 30 : 0);
+    if (e.data === 'user_fold' && reading.on && !reading.waitFlip) stopAll();     // 手动拖页 = 不读了
+  });
+  // 书本区域大小一变（窗口缩放、工具栏字体加载完变矮、换行）→ 让库按新尺寸重算画布，再摆真页面
+  // （库自己只听 window resize；工具栏变矮不会触发它 → 画布被拉伸、真页面对不齐）
+  window.addEventListener('resize', layout);
+  var lastSize = '';
+  function refit() {
+    var s = book.offsetWidth + 'x' + book.offsetHeight;
+    if (s === lastSize) return;
+    lastSize = s;
+    try { flip.getUI().update(); } catch (e) {}
+    place();
+  }
+  if (window.ResizeObserver) new ResizeObserver(function () { layout(); refit(); }).observe(book);
+  if (window.ResizeObserver) new ResizeObserver(layout).observe(bar);
+  setInterval(refit, 500);
+  ['mouseup', 'touchend', 'blur'].forEach(function (ev) {
+    window.addEventListener(ev, function () { setTimeout(function () { if (resting) document.body.classList.remove('dragging'); }, 60); });
+  });
+  book.addEventListener('mousedown', function () { document.body.classList.add('dragging'); }, true);
+
+  // ---------- 页码 + 翻页 ----------
+  var pn = document.getElementById('pn');
   function label() {
     var names = visible().filter(function (k) { return frames[k]; }).map(function (k) { return frames[k].title.replace('Page', 'P'); });
     pn.textContent = names.length ? names.join(' · ') : (visible()[0] === 0 ? '封面' : '封底');
     keep('page', String(flip.getCurrentPageIndex()));
   }
-  document.getElementById('prev').onclick = function () { flip.flipPrev(); };
-  document.getElementById('next').onclick = function () { flip.flipNext(); };
+  document.getElementById('prev').onclick = function () { flip.flipPrev('bottom'); };
+  document.getElementById('next').onclick = function () { flip.flipNext('bottom'); };
   document.addEventListener('keydown', function (e) {
-    if (e.key === 'ArrowRight') flip.flipNext();
-    else if (e.key === 'ArrowLeft') flip.flipPrev();
+    if (e.target && e.target.tagName === 'SELECT') return;
+    if (e.key === 'ArrowRight') flip.flipNext('bottom');
+    else if (e.key === 'ArrowLeft') flip.flipPrev('bottom');
     else if (e.key === ' ') { e.preventDefault(); togglePlay(); }
   });
   flip.on('flip', function () {
-    label();
-    if (reading.on && reading.waitFlip) { reading.waitFlip = false; readFrom(visible()); }
+    label(); place();
+    if (reading.on && reading.waitFlip) { reading.waitFlip = false; setTimeout(function () { readFrom(visible()); }, 300); }
   });
-  flip.on('changeOrientation', label);
-  label();
+  flip.on('changeOrientation', function () { label(); setTimeout(place, 60); });
 
   // ---------- 主题 / 笔记 ----------
   function send(f, msg) { if (f && f.contentWindow) f.contentWindow.postMessage(msg, '*'); }
@@ -160,11 +254,12 @@
     document.querySelectorAll('[data-t]').forEach(function (b) { b.classList.toggle('on', b.dataset.t === view.t); });
     document.querySelectorAll('[data-c]').forEach(function (b) { b.classList.toggle('on', b.dataset.c === view.c); });
   }
+  function restyle() { flip.updateFromImages(urls()); paintSeg(); setTimeout(place, 60); }
   document.querySelectorAll('[data-t]').forEach(function (b) {
-    b.onclick = function () { view.t = b.dataset.t; keep('theme', view.t); all({ say: 'theme', v: view.t }); paintSeg(); };
+    b.onclick = function () { view.t = b.dataset.t; keep('theme', view.t); all({ say: 'theme', v: view.t }); restyle(); };
   });
   document.querySelectorAll('[data-c]').forEach(function (b) {
-    b.onclick = function () { view.c = b.dataset.c; keep('clean', view.c); all({ say: 'clean', v: view.c }); paintSeg(); };
+    b.onclick = function () { view.c = b.dataset.c; keep('clean', view.c); all({ say: 'clean', v: view.c }); restyle(); };
   });
   paintSeg();
 
@@ -176,7 +271,7 @@
   });
   speedSel.value = load('speed', '1');
   var reading = { on: false, frame: -1, paused: false, waitFlip: false, queue: [] };
-  var states = {};                                // 每个 iframe 最近一次报来的状态
+  var states = {};                                // 每页最近一次报来的状态
 
   function readFrom(list) {                       // 依次读 list 里的书页；读完翻页继续
     reading.queue = list.filter(function (k) { return frames[k]; });
@@ -191,15 +286,20 @@
       send(frames[reading.frame], { say: 'play' });
       return;
     }
-    var last = visible(); last = last[last.length - 1];
+    var vis = visible(), last = vis[vis.length - 1];
     var more = frames.slice(last + 1).some(function (f) { return f; });
-    if (more) { reading.waitFlip = true; flip.flipNext(); }
+    if (more) { reading.waitFlip = true; flip.flipNext('bottom'); }
     else stopAll();
   }
   function stopAll() { reading.on = false; reading.paused = false; reading.frame = -1; reading.waitFlip = false; all({ say: 'stop' }); ui(); }
   function togglePlay() {
-    if (!reading.on) { reading.on = true; reading.paused = false; readFrom(visible()); }
-    else { reading.paused = !reading.paused; send(frames[reading.frame], { say: 'toggle' }); }
+    if (!reading.on) {
+      var vis = visible();
+      if (!vis.some(function (k) { return frames[k]; })) {   // 在封面上按朗读：先翻开
+        reading.on = true; reading.waitFlip = true; flip.flipNext('bottom'); ui(); return;
+      }
+      reading.on = true; reading.paused = false; readFrom(vis);
+    } else { reading.paused = !reading.paused; send(frames[reading.frame], { say: 'toggle' }); }
     ui();
   }
   playBtn.onclick = togglePlay;
@@ -230,10 +330,10 @@
     }
   });
   frames.forEach(function (f) { if (f) f.addEventListener('load', function () { send(f, { say: 'hello' }); }); });
-  // 手动翻页时停掉朗读（自动翻页除外）
-  flip.on('changeState', function (e) { if (e.data === 'user_fold' && reading.on && !reading.waitFlip) stopAll(); });
+
+  setTimeout(function () { label(); place(); }, 50);
   ui();
-  window.BOOK = { flip: flip, frames: frames, visible: visible, states: states, reading: reading };
+  window.BOOK = { flip: flip, frames: frames, visible: visible, states: states, reading: reading, place: place };
 })();
 </script>
 </body>

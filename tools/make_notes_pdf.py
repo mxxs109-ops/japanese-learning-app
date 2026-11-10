@@ -1,6 +1,7 @@
 # 把手写笔记的 HTML 电子版导出成两个 PDF（照片配色 / 白底）
 # 用法：python tools/make_notes_pdf.py notes/Page001/Page001.html
 # 输出：同目录下 <名字>_照片配色.pdf、_白底.pdf、_照片配色_隐藏笔记.pdf、_白底_隐藏笔记.pdf
+#       + flip/ 下 4 张整页图（翻书用，见文件末尾）
 import os, subprocess, sys, pathlib, time
 
 EDGE = r'C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe'
@@ -34,4 +35,29 @@ for query, label in VERSIONS:
         print('[OK]', theme, out.stat().st_size, 'bytes')
     else:
         print('[FAIL]', theme); ok = False
+
+# 翻书（notes/book.html）用的整页图：PageNNN/flip/<white|photo>_<0|1>.png，A4 的 2 倍（1588×2246）
+# 翻页动画在画布上画这些图；书停稳后上面再叠真页面（朗读/高亮用），两者由同一个 HTML 生成，看起来一样
+import struct
+flip_dir = src.parent / 'flip'
+flip_dir.mkdir(exist_ok=True)
+for t in ('white', 'photo'):
+    for c in ('0', '1'):
+        out = flip_dir / ('%s_%s.png' % (t, c))
+        for attempt in range(3):
+            if out.exists():
+                out.unlink()
+            subprocess.run([EDGE, '--headless=new', '--disable-gpu', '--user-data-dir=' + str(prof),
+                            '--hide-scrollbars', '--force-device-scale-factor=2', '--window-size=794,1123',
+                            '--virtual-time-budget=4000', '--screenshot=' + str(out),
+                            url + '?shot=1&clean=' + c + ('&theme=photo' if t == 'photo' else '')],
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            if out.exists() and out.stat().st_size > 1000:
+                break
+            time.sleep(1)
+        if out.exists():
+            w, h = struct.unpack('>II', out.read_bytes()[16:24])
+            print('[OK] flip', t, c, '%dx%d' % (w, h), out.stat().st_size, 'bytes')
+        else:
+            print('[FAIL] flip', t, c); ok = False
 sys.exit(0 if ok else 1)
