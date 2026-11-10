@@ -185,6 +185,23 @@
   @keyframes rv-shake { 0%, 100% { transform: none; } 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
   @keyframes rv-spark { 0% { transform: translate(0, 0) scale(.3); opacity: 1; }
                         100% { transform: translate(var(--dx), var(--dy)) scale(1); opacity: 0; } }
+  .orig .k-head, .orig .k-ans, .orig .k-sp { flex: none; }
+  .orig .k-head { display: flex; flex-direction: column; gap: 4px; }
+  /* 电脑上：照原题截图一比一 —— 左题目卡片（淡蓝阴影）| 灰竖线 | 右解答蓝框，页面加宽装下两栏 */
+  .wrap:has(.orig) { max-width: 1100px; }
+  @media (min-width: 700px) {
+    .orig { display: grid; grid-template-columns: 1fr 1fr; gap: 0; overflow: visible; margin: 14px 0 24px; }
+    .orig > .o-q { padding-right: 30px; border-right: 5px solid #e9ecec; }
+    .orig > .o-a { padding-left: 34px; }
+    .orig .o-v { width: 100%; box-sizing: border-box; height: 500px; font-size: 22px; line-height: 1.9; letter-spacing: 3px; gap: 0; justify-content: space-evenly; }
+    .orig .o-q .o-v { box-shadow: 3px 3px 10px rgba(90, 160, 230, .22); padding: 30px 20px; box-sizing: border-box; }
+    .orig .o-pic { width: 112px; }
+    .orig .o-word { font-size: 46px; margin-top: 22px; }
+    .orig .o-dot { font-size: 36px; padding: 16px 6px; letter-spacing: 10px; }
+    .orig .o-lab, .orig .k-lab { font-size: 12px; }
+    .orig .o-frame { padding: 22px 16px; border-width: 3px; border-radius: 12px; }
+    .orig .k-ans { letter-spacing: 6px; }
+  }
   @media (max-width: 480px) {
     .orig { gap: 6px; }
     .orig .o-v { gap: 7px; } .orig .o-head { font-size: 11px; }
@@ -248,7 +265,7 @@
   var STORE_KEY = 'jp-daily-v1';
   var REMOTE_KEY = 'jp-daily-remote-v1';
   // 改了 index.html / srs.js / install.bat 就把这个数 +1，并把 version.txt 改成同一个数
-  var APP_VERSION = 10;
+  var APP_VERSION = 11;
   var GH_API = 'https://api.github.com/repos/mxxs109-ops/japanese-learning-app/contents/';
   var INSTALL_CMD = 'curl -sL -o "%TEMP%\\jla.bat" https://raw.githubusercontent.com/mxxs109-ops/japanese-learning-app/main/install.bat && "%TEMP%\\jla.bat"';
 
@@ -486,18 +503,18 @@
             'px;animation-delay:' + (0.95 + (i % 3) * 0.05).toFixed(2) + 's"></i>';
         }
       }
-      var left = '<div class="o-q"><div class="o-head">問題（もんだい）</div><div class="o-v">' +
+      var left = '<div class="o-q"><div class="o-v">' +
         '<div class="o-instr">' + inline(q.instruction) + '</div>' +
         '<div class="o-pic">' + img + '<div class="o-word">' + esc(q.sentence).replace('□', '<span class="o-blank"></span>') + '</div></div>' +
         '<div class="o-choices"><div class="o-lab">せんたくし</div><div class="o-dot">' +
         q.options.map(esc).join('・') + '</div></div></div></div>';
-      var right = '<div class="o-a"><div class="o-head ok">正解（せいかい）</div><div class="o-v o-frame">' +
-        '<div class="k-lab">こたえと　かいせつ</div>' +
-        '<div>こたえ…' + esc(k.answer || q.options[q.answer]) + '</div>' +
+      var right = '<div class="o-a"><div class="o-v o-frame">' +
+        '<div class="k-head"><div class="k-lab">こたえと　かいせつ</div>' +
+        '<div class="k-ans">こたえ…' + esc(k.answer || q.options[q.answer]) + '</div></div>' +
         '<div class="o-pic">' + img + '<div class="o-word">' +
         esc(q.sentence).replace('□', '<span class="o-fill"><b>' + ans + '</b></span>') + '</div></div>' +
         (typeof k.text === 'string' ? '<div class="k-txt">' + inline(k.text) + '</div>' : '') +
-        sparks + '</div></div>';
+        '<i class="k-sp"></i>' + sparks + '</div></div>';
       return '<div class="orig' + (ok ? '' : ' bad') + '">' + left + right + '</div>';
     } catch (e) { return ''; }
   }
