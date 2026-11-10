@@ -21,6 +21,14 @@
 | `srs.js` | 复习规则（改规则只改这里）；也能被 node `require` 做测试 |
 | `install.bat` | 一键安装/更新脚本（纯 ASCII + CRLF，`.gitattributes` 里 `*.bat -text` 保证 GitHub 原样存 CRLF） |
 | `README.md` | 仓库首页，写着一键命令 |
+| `images/` | 题目插图（install.bat 会拷） |
+| `screenshots/<级别>/` | 原题 + 解析截图（只进仓库，不进软件） |
+| `notes/` | **手写笔记书**（和小软件无关的另一条线，见下面「手写笔记书」一章） |
+| `tools/check_teach.js` | 教学模式注音校验 |
+| `tools/make_notes_pdf.py` | 笔记页 → 4 个 PDF + 4 张翻页用整页图 |
+| `tools/make_notes_audio.py` | 笔记页 → VOICEVOX 朗读音频（有缓存） |
+| `tools/test_notes_book.py` | 笔记书自动验收（CDP 模拟鼠标，6 项） |
+| `docs/HANDOFF.md` / `docs/WORKLOG.md` | 本文件 / 每天做了什么（倒序） |
 
 ## 复习规则（辐射蓝 2026-11-06 定）
 
@@ -74,6 +82,87 @@ curl / tar 写死 `%SystemRoot%\System32\` 的版本：装了 Git 的机器上�
 - 模拟日期：网址加 `?today=2026-11-13`（顶上黄条提示；测试模式下作答也会写进进度）
 - 进度存在 localStorage key `jp-daily-v1`；file:// 下 Chromium 所有本地文件共用一个存储
 
+## 手写笔记书（notes/，2026-11-09 起）
+
+辐射蓝把真题手抄在 KOKUYO 横线本上，拍照发来。这里把每一页做成「打印字体电子版」：PDF 能打印，还装订成一本可翻页、可朗读的书。
+**和小软件（index.html）是两条线**：install.bat 不拷 `notes/`，朋友的软件里没有。
+
+### 打开方式
+- 书：`notes/book.html`（桌面 `日本語Daily_手写笔记\book.html` 同一份）——**平时给他看就开这个**
+- 单页：`notes/PageNNN/PageNNN.html`（右上角也有切换和朗读）
+- PDF：`notes/PageNNN/PageNNN_<照片配色|白底>[_隐藏笔记].pdf`
+
+### 结构
+```
+notes/
+├─ book.html                 书（翻页 + 工具栏）
+├─ pages.js                  书里有哪些页：window.NOTE_PAGES = ['Page001', ...]
+├─ _shared/
+│  ├─ say.js                 所有页共用：朗读、逐词高亮、嵌进书（?embed=1）、截图模式（?shot=1）、导出朗读计划（?sayplan=1）
+│  ├─ page-flip.browser.js   StPageFlip 2.0.7（MIT）本地副本 —— 🔴 改过一处（clear 用 clearRect），别从 CDN 覆盖
+│  └─ page-flip.LICENSE
+└─ PageNNN/
+   ├─ PageNNN.html           排版源（一行 = 本子一条横线）
+   ├─ PageNNN_原稿照片.jpg     他拍的原稿
+   ├─ PageNNN_A3插图.png      题目插图（原图原色）
+   ├─ PageNNN_*.pdf × 4       照片配色/白底 × 显示/隐藏笔记
+   ├─ flip/<white|photo>_<0|1>.png   翻书用整页图（1588×2246）
+   └─ audio/                  朗读：<缓存号>.ogg/.json、manifest.js、kana.txt、voices.txt
+```
+
+### 新抄一页的完整流程（Page002 照这个做）
+1. 他发照片 → 建 `notes/Page002/`，放 `Page002_原稿照片.jpg`；有插图就从原题截图裁出 `Page002_<题号>插图.png`
+2. 复制 Page001.html 改成 Page002.html，**逐行照照片**写（先放大照片看清每处颜色）：
+   - 一行 = 一条横线；换行位置照手写稿（跨行的词在朗读里会自动连读）
+   - 颜色：题干说明 / 中文注释 / 圈正确答案 / × / 对调括号 = 金棕（`gold`）；Page 标题 / 日文句子 / 选项 / 波浪线 = 红（`red`）
+   - **笔记**（隐藏笔记时消失、也不朗读）一律包在行内 `<span class="note">` 里 —— ⚠️ 别挂在整行 `.row` 上，会连横线一起藏掉
+   - 要朗读的加 `data-say`：题干两行同一个 id（`A1-i`）、句子行 `A1-s`、选项 `A1-o1`〜`o4`（选项在同一行就挂在 `.opt` 上）；
+     题号标签包 `<span class="nosay">A1：</span>`；下划线 `<span class="under">＿＿</span>` 会念「かせん」
+   - 页尾两行 script（`audio/manifest.js` + `../_shared/say.js`）别漏
+3. 导 PDF + 翻页图：`python tools\make_notes_pdf.py notes\Page002\Page002.html` → 4 个 PDF + `flip/` 4 张图，打开 PDF 看一遍
+4. 生成朗读：`D:\A030_VOICEVOX\venv\Scripts\python.exe tools\make_notes_audio.py notes\Page002\Page002.html`
+   → **打开 `audio/kana.txt` 逐段核对读音**（片假名 = 实际念法）；不对就在 say.js 里加读法替换，生成方法变了把脚本里 `GEN` +1
+5. `notes/pages.js` 加 `'Page002'`
+6. 验收：`D:\A030_VOICEVOX\venv\Scripts\python.exe tools\test_notes_book.py` → 6/6；看 `%TEMP%\notes_book_test\` 截图。
+   有两页了，顺手测「全部朗读 → 第 1 页读完自动翻到第 2 页」（至今没测过）
+7. 整个 `notes/` 复制到桌面 `日本語Daily_手写笔记\`，逐文件 md5 比对；commit + push；更新 WORKLOG
+
+### 朗读（VOICEVOX）
+- 为什么是它（11-10 实测 + 搜索）：CosyVoice 用中文音色念日语不准（14 段只对 1 段）；微软 Edge 语音准但只有 2 个音色且不开源；
+  AivisSpeech 音质好但官方 mora 时长永远 0.0，做不了精确高亮。VOICEVOX：开源、离线、几十个角色、`audio_query` 给每个音的时长
+- 引擎：`D:\A030_VOICEVOX\windows-cpu\run.exe`（0.26.1 CPU 版），脚本自己起、用完关；python 用 `D:\A030_VOICEVOX\venv`（soundfile/numpy/pypdf/websocket-client）
+- 只读 `data-say`；`.note` / `.nosay` / `<rt>` 不读
+- 生成方式（`make_notes_audio.py`）：词间加全角空格送进引擎（否则断错词，如「デパートでかいもの」→ でかい），
+  再删掉这些空格造成的停顿（只留原文 。、）；「1・2・3・4」改念 いち、に、さん、よん（否则念成「いってん」）
+- 缓存号 = sha1(GEN | 引擎版本 | 音色 | 要念的文字)，有就跳过；`--prune` 删没人用的旧音频（默认只报数）
+- 高亮：每个词的开始时间 = 按「每个词几个音」在整句的音时间轴上切出来；`scaled=0` 表示每段都对得上（Page001 全部 0）
+- 音色：脚本 `DEFAULT_VOICES` 6 个（四国めたん / ずんだもん / 春日部つむぎ / 冥鳴ひまり / 青山龍星 / 玄野武宏），`--voices 2,3` 指定；
+  全部音色 id 在 `audio/voices.txt`。🔴 VOICEVOX 角色条款：用到哪个角色就要显示「音声：VOICEVOX:角色名」（书和单页都显示了）
+- 语速在页面上用 `playbackRate` 调（0.6×〜1.3×，变速不变调），不重新生成
+
+### 翻书（StPageFlip 画布模式）
+- 翻页时画的是整页图（`flip/`），卷角 / 阴影 / 拖拽都在 canvas 上；**书停稳**（state=read）时，在看得到的页上叠真页面 iframe（朗读 / 高亮用），
+  一开始卷角或拖页就藏起来。图和真页面由同一个 HTML 生成，所以看不出切换
+- 🔴 **改了 PageNNN.html 必须重跑 make_notes_pdf.py**，否则翻页时露出旧图
+- 坑（都踩过）：
+  1. 画布模式库只在 `<canvas>` 上听「按下」→ 书角 / 书边的透明把手把 mousedown/touchstart **转发给 canvas**，否则拖不动
+  2. 库的 `clear()` 原本把画布涂白 → 书两侧白边 → 本地副本改成 `clearRect`
+  3. 库只听 window resize；工具栏字体加载后变矮、书区变大它不知道 → 画布被拉伸、真页面错位 → ResizeObserver + `flip.getUI().update()`
+  4. iframe 里页面按 210mm = 793.7px 固定值缩放（用 offsetWidth 会量到自己 zoom 过的值）；书页尺寸变化不一定触发 iframe 的 resize → 每 0.3s 对一次
+- 第一版用的是 HTML 模式（直接翻 iframe），他评价「丑陋、没对齐」→ 已整个换掉，别回退
+- 书 ↔ 页的消息：书发 `{say: theme|clean|play|toggle|stop|voice|speed|hello}`；页回 `{say:'state', playing, active, voices…}` 和整页读完的 `{say:'done'}`
+
+### 测试
+- `tools/test_notes_book.py`：CDP 控制固定视口 headless Edge，模拟真实鼠标。6 项：停稳对齐 / 悬停卷角 / 拖过书脊翻页 / 换主题换图 / 朗读 / 窄屏单页。
+  判据能红能绿：把「转发按下」那行弄坏的副本 → 第 3 项 FAIL、exit 1（`NOTES_BOOK=<副本路径>` 可测别的副本）
+- 🔴 **别用 `msedge --screenshot` 验证书**：它截图时改视口，排版和截图不是同一尺寸，画面是错的（11-10 被骗过一次）
+- 朗读读音：看 `audio/kana.txt`；要更硬的证据就用 Whisper 转写（CosyVoice 的 venv 里有：`D:\A029_CosyVoice\venv`，模型 small）
+
+### 待他定 / 没做完
+- 6 个音色留哪几个；两个男声（青山龍星、玄野武宏）Whisper 听出词间多了「お/あ」，可能是删停顿后的衔接杂音
+- A4 选项下的波浪线（かいもの 等）隐藏笔记时要不要也藏
+- 「整页读完自动翻页接着读」等 Page002 实测
+
 ## 当前状态（2026-11-10）
 
 - **当前 APP_VERSION = 8**（version.txt 同步）。仓库只有 `main` 一个分支（他说「master 分支」指的就是它）
@@ -97,31 +186,7 @@ curl / tar 写死 `%SystemRoot%\System32\` 的版本：装了 Git 的机器上�
   数据在 `questions.js` 底部 `window.TEACH[id] = {instruction?, sentence?, options?}`，没写的字段显示原文；检查更新会一起拉。
   🔴 **每天加新题时要同时写 TEACH**，然后跑 `node tools/check_teach.js`：去掉注音后必须和原题逐字一样、不许有没注音的汉字
   （片假名无来源词只给 INFO，假词选项正常）。假词选项（守けて/拾集）按单字读音标
-- **手写笔记电子版**（11-09 起）：`notes/PageNNN/` = 原稿照片 `PageNNN_原稿照片.jpg` + 排版源 `PageNNN.html` +
-  两个 PDF（`_照片配色.pdf` 纸色+金棕/红墨水；`_白底.pdf` 白纸淡线，金棕→黑、红→正蓝）。桌面 `日本語Daily_手写笔记\PageNNN\` 同一份。
-  导出：`python tools/make_notes_pdf.py notes/PageNNN/PageNNN.html`。HTML 里一行 = 本子一条横线，换行照手写稿；
-  颜色约定：题干说明/中文注释/圈正确答案/×/对调括号 = 金棕；Page 标题/日文句子/选项/波浪线 = 红。
-  「隐藏笔记」（11-09 加）：`&clean=1` / 屏幕右上角按钮，隐藏所有 `class="note"`（中文注释）+ 圈答案 + × + 对调括号，题目和下划线照旧；
-  导出共 4 个 PDF（照片配色 / 白底 × 有笔记 / 隐藏笔记）。题目插图放 `PageNNN_A3插图.png`（原图原色）
-  **默认 = 白底 + 隐藏笔记**（他定）；`?theme=photo` / `&clean=0` 切过去。插图只占该题的「说明第 2 行 + 句子 + 选项」三行，
-  上下贴横线不多占行，紧跟文字右边；显示笔记时右移让开中文注释。题目句子里被考的词用红色波浪线（新しい、ほてる）
-  **Page001 已抄完**（11-10，A1〜A4：新しい / ほてる / うるさい / デパート）。A4 选项里的波浪线（かいもの 等）隐藏笔记时也保留——
-  他还没表态，若要算笔记就加 `note`。⚠️ `note` 只能挂在行内 span 上，挂在整行 `.row` 上会连横线一起藏掉。
-  下一页 = 新建 `notes/Page002/`，照 Page001 的结构；他发照片后：放原稿照片 → 写 HTML（要读的加 `data-say`）→
-  导 4 个 PDF → **生成朗读** → `notes/pages.js` 加一行 → 整个 `notes/` 同步到桌面 `日本語Daily_手写笔记\`（md5 比对）
-- **笔记朗读**（11-10）：VOICEVOX 0.26.1 在 `D:\A030_VOICEVOX\windows-cpu\run.exe`（脚本会自己起、用完关）。
-  生成：`D:\A030_VOICEVOX\venv\Scripts\python.exe tools\make_notes_audio.py notes\PageNNN\PageNNN.html [--prune]`
-  - 只读 `data-say` 标的元素；`.note`（中文笔记）/`.nosay`（A1：）/`<rt>` 不读；`.under`（＿＿）念「かせん」
-  - 产物 `PageNNN/audio/`：`<缓存号>.ogg/.json` + `manifest.js`（页面读）+ `kana.txt`（**每次生成后看这个核对读音**）+ `voices.txt`（全部音色 id）
-  - 缓存：文字/音色/引擎版本/`GEN` 没变就复用。🔴 改了送进引擎的方式（空格、停顿、读法替换）必须把 `GEN` +1
-  - 默认 6 个音色在脚本 `DEFAULT_VOICES`；用 `--voices 2,3` 指定。页面上要显示「音声：VOICEVOX:角色名」（VOICEVOX 角色使用条款）
-  - 待他定：试听后留哪几个音色；两个男声（青山龍星、玄野武宏）Whisper 听出词间多「お/あ」
-- **翻书**（11-10）：`notes/book.html`，页清单 `notes/pages.js`。宽屏对开 / 窄屏单页，带封面封底（封面封底是 JS 画布现画的）；主题/笔记/朗读在书的工具栏上。
-  - 翻页 = StPageFlip **画布模式**，吃整页图 `PageNNN/flip/<white|photo>_<0|1>.png` —— 🔴 **改了 PageNNN.html 一定要重跑 `tools/make_notes_pdf.py`**，
-    否则翻页时露出的是旧图（停稳时上面叠的是新的真页面，两层会不一样）
-  - 停稳才叠真页面 iframe（朗读/高亮）；书角/书边的透明把手把按下转发给 canvas（库只在 canvas 上听按下）
-  - `notes/_shared/page-flip.browser.js` 是**改过一处**的本地副本（clear 用 clearRect），别从 CDN 覆盖
-  - 「读完一页自动翻页接着读」还没用两页实测过
+- **手写笔记书**：Page001 已抄完（A1〜A4），有朗读和翻书。详见下面「手写笔记书」一章
 - 题库级别筛选（11-09，APP_VERSION 6）：可多选，存 `state.levels`；**只管题库列表和「复习」，「今日」不筛**（他拍板：
   否则没选的级别到期错题永远不出现）。「错题集」标签不显示红点数字（他要求）
 - 微信结果已补录：Day1 新しい 对、通って 错（错题集，11-13 再出现）；Day2 五道全对 → 已掌握
