@@ -194,7 +194,9 @@
     .orig > .o-q { padding-right: 30px; border-right: 5px solid #e9ecec; }
     .orig > .o-a { padding-left: 34px; }
     .orig .o-v { width: 100%; box-sizing: border-box; height: 500px; font-size: 22px; line-height: 1.9; letter-spacing: 3px; gap: 0; justify-content: space-evenly; }
-    .orig .o-q .o-v { box-shadow: 3px 3px 10px rgba(90, 160, 230, .22); padding: 30px 20px; box-sizing: border-box; }
+    .orig .o-q .o-v { padding: 30px 20px; box-sizing: border-box; }
+    .orig .o-head { font-size: 15px; margin-bottom: 16px; }
+    .orig > .o-q, .orig > .o-a { padding-top: 0; }
     .orig .o-pic { width: 112px; }
     .orig .o-word { font-size: 46px; margin-top: 22px; }
     .orig .o-dot { font-size: 36px; padding: 16px 6px; letter-spacing: 10px; }
@@ -265,7 +267,7 @@
   var STORE_KEY = 'jp-daily-v1';
   var REMOTE_KEY = 'jp-daily-remote-v1';
   // 改了 index.html / srs.js / install.bat 就把这个数 +1，并把 version.txt 改成同一个数
-  var APP_VERSION = 11;
+  var APP_VERSION = 12;
   var GH_API = 'https://api.github.com/repos/mxxs109-ops/japanese-learning-app/contents/';
   var INSTALL_CMD = 'curl -sL -o "%TEMP%\\jla.bat" https://raw.githubusercontent.com/mxxs109-ops/japanese-learning-app/main/install.bat && "%TEMP%\\jla.bat"';
 
@@ -282,7 +284,8 @@
   var TEACH = {};   // 教学模式注音版，按题目 id
   function mergeQuestions(list, past, teach) {
     (list || []).filter(validQ).forEach(function (q) {
-      if (QMAP[q.id]) Q[Q.indexOf(QMAP[q.id])] = q; else Q.push(q);
+      // 同 id：GitHub 版的字段覆盖本地，但 GitHub 旧缓存里没有的新字段（如 kaisetsu）保留本地的，不被整条盖掉
+      if (QMAP[q.id]) { var old = QMAP[q.id]; q = Object.assign({}, old, q); Q[Q.indexOf(old)] = q; } else Q.push(q);
       QMAP[q.id] = q;
     });
     (past || []).forEach(function (p) {
@@ -470,7 +473,7 @@
     var best = null;
     Q.forEach(function (q) {
       var r = rec(q.id), d = null;
-      if (r.status === 'new' && q.date > TODAY) d = q.date;
+      if (r.status === 'new' && q.date > TODAY && q.date < '2099') d = q.date;   // 待定的不算「下一道题」
       else if (r.status === 'learning' && r.due > TODAY) d = r.due;
       if (d && (!best || d < best)) best = d;
     });
@@ -503,12 +506,12 @@
             'px;animation-delay:' + (0.95 + (i % 3) * 0.05).toFixed(2) + 's"></i>';
         }
       }
-      var left = '<div class="o-q"><div class="o-v">' +
+      var left = '<div class="o-q"><div class="o-head">問題（もんだい）</div><div class="o-v">' +
         '<div class="o-instr">' + inline(q.instruction) + '</div>' +
         '<div class="o-pic">' + img + '<div class="o-word">' + esc(q.sentence).replace('□', '<span class="o-blank"></span>') + '</div></div>' +
         '<div class="o-choices"><div class="o-lab">せんたくし</div><div class="o-dot">' +
         q.options.map(esc).join('・') + '</div></div></div></div>';
-      var right = '<div class="o-a"><div class="o-v o-frame">' +
+      var right = '<div class="o-a"><div class="o-head ok">正解（せいかい）</div><div class="o-v o-frame">' +
         '<div class="k-head"><div class="k-lab">こたえと　かいせつ</div>' +
         '<div class="k-ans">こたえ…' + esc(k.answer || q.options[q.answer]) + '</div></div>' +
         '<div class="o-pic">' + img + '<div class="o-word">' +
@@ -603,11 +606,11 @@
     if (!shown.length) return h + '<div class="empty">这个级别还没有题</div></div>';
     shown.slice().sort(function (a, b) { return a.date < b.date ? 1 : -1; }).forEach(function (q) {
       var r = rec(q.id), locked = q.date > TODAY, st;
-      if (locked) st = whenText(q.date) + '解锁';
+      if (locked) st = q.date >= '2099' ? '解锁日期待定' : whenText(q.date) + '解锁';   // 2099-12-31 = 先锁着、哪天放还没定
       else st = { 'new': '未做', learning: '错题 ' + r.streak + '/' + SRS.MAX_STREAK, mastered: '已掌握', graduated: '已毕业' }[r.status];
       h += '<div class="item"' + (locked ? ' style="opacity:.5"' : '') + '><span class="lv ' + esc(q.level) + '">' + esc(q.level) + '</span>' +
         '<div class="main"><div class="s">' + (locked ? '🔒 ' + esc(q.section) : sentenceHTML(tText(q, 'sentence'))) + '</div>' +
-        '<div class="m">' + fmtDate(q.date) + ' · ' + st + '</div></div>' +
+        '<div class="m">' + (q.date >= '2099' ? '' : fmtDate(q.date) + ' · ') + st + '</div></div>' +
         (locked ? '' : '<button class="btn ghost small" data-act="free-one" data-id="' + esc(q.id) + '">练</button>') + '</div>';
     });
     return h + '</div>';

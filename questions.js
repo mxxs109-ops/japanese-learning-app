@@ -299,6 +299,37 @@ window.QUESTIONS = [
     ],
     // 原题「こたえと かいせつ」，照原题竖排显示：□ = 蓝框空格，〔…〕 = 灰框，〈…〉 = 粉色
     kaisetsu: { answer: 'つ', text: '□に　〔つ〕を　いれて、〔〈つ〉る〕だよ。' }
+  },
+  // 🔒 小1 第 2、3 题：11-10 他发来「先锁上」—— date 2099-12-31 = 解锁日期待定，定了只改 date
+  {
+    id: 'sho1-hiragana1-shika',
+    date: '2099-12-31',
+    level: '小1',
+    section: 'こくご　ひらがな（1）ひらがな1',
+    instruction: 'えを　みて、□に　あう　ひらがなを　えらびましょう。',
+    sentence: '□か',
+    image: 'images/sho1-hiragana1-shika.png',
+    options: ['も', 'し', 'つ'],
+    answer: 1,
+    explanation: [
+      '（解析是我写的，他还没发中文解析）图中画的是一只鹿，日语叫「**しか**」（鹿），所以空格里填「し」，组成「しか」。'
+    ],
+    kaisetsu: { answer: 'し', text: '□に　〔し〕を　いれて、〔〈し〉か〕だよ。' }
+  },
+  {
+    id: 'sho1-hiragana1-hebi',
+    date: '2099-12-31',
+    level: '小1',
+    section: 'こくご　ひらがな（1）ひらがな1',
+    instruction: 'えを　みて、□に　あう　ひらがなを　えらびましょう。',
+    sentence: '□び',
+    image: 'images/sho1-hiragana1-hebi.png',
+    options: ['つ', 'て', 'へ'],
+    answer: 2,
+    explanation: [
+      '（解析是我写的，他还没发中文解析）图中画的是一条蛇，日语叫「**へび**」（蛇），所以空格里填「へ」，组成「へび」。'
+    ],
+    kaisetsu: { answer: 'へ', text: '□に　〔へ〕を　いれて、〔〈へ〉び〕だよ。' }
   }
 ];
 
@@ -312,7 +343,8 @@ window.PAST_RESULTS = [
   { id: 'n3-moji1-daihyou',   date: '2026-11-07', choice: 2 },  // 选 3 だいひょう → 对
   { id: 'n2-moji1-tane',      date: '2026-11-07', choice: 1 },  // 选 2 たね → 对
   { id: 'n1-moji1-idonde',    date: '2026-11-07', choice: 3 },  // 选 4 いどんで → 对
-  { id: 'n1-moji3-yayakoshii', date: '2026-11-10', choice: 2 }  // 选 3 複雑だ → 对（11-10 辐射蓝说误点进了错题集，改回已掌握）
+  { id: 'n1-moji3-yayakoshii', date: '2026-11-10', choice: 2 },  // 选 3 複雑だ → 对（11-10 辐射蓝说误点进了错题集，改回已掌握）
+  { id: 'sho1-hiragana1-tsuru', date: '2026-11-10', choice: 0 }  // 选 1 つ → 对（同上，误点）
 ];
 
 // 教学模式（右上角「注音」开关）用的注音版，按题目 id 写；没写的部分显示原文。
