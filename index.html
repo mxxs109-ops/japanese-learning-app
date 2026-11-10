@@ -138,35 +138,64 @@
   .expl { font-size: 14.5px; line-height: 1.9; border-top: 1px solid var(--line); padding-top: 14px; }
   .expl p { margin: 0 0 8px; }
   .expl ul { margin: 0 0 8px; padding-left: 20px; }
+  .expl .xbox { display: inline-block; border: 1px solid #c9cdd0; padding: 0 3px; line-height: 1.5; margin: 0 1px; }
+  .expl .xpink { color: #d63fbf; }
+  .expl .xblank { display: inline-block; width: 0.95em; height: 0.95em; border: 2px solid #4ea3dd; box-sizing: border-box;
+                  vertical-align: -0.12em; margin: 0 1px; }
   .next { display: flex; justify-content: flex-end; margin-top: 16px; }
 
-  /* 小1 答完后的「左图右字」展示（2026-11-10，APP_VERSION 9） */
-  .reveal { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); gap: 14px; align-items: center;
-            background: linear-gradient(135deg, #eef8f7, #fdf3fa); border-radius: 18px; padding: 16px; margin: 10px 0 16px;
-            position: relative; overflow: hidden; }
-  .reveal .pic { background: #fff; border-radius: 14px; padding: 10px; box-shadow: 0 6px 18px rgba(80, 160, 158, .18);
-                 animation: rv-pop .6s cubic-bezier(.34, 1.56, .64, 1) both; }
-  .reveal .pic { justify-self: center; max-width: 230px; width: 100%; box-sizing: border-box; }
-  .reveal .pic img { display: block; width: 100%; height: auto; max-height: 240px; object-fit: contain; animation: rv-bob 2.6s ease-in-out .8s infinite; }
-  .reveal .word { text-align: center; font-size: 46px; font-weight: 700; letter-spacing: 4px; line-height: 1.2;
-                  animation: rv-in .45s ease-out .15s both; }
-  .reveal .box { display: inline-block; min-width: 1.15em; border: 3px solid #4ea3dd; border-radius: 10px; margin-right: 2px;
-                 color: #d63fbf; background: #fff; }
-  .reveal .box b { display: inline-block; animation: rv-stamp .55s cubic-bezier(.34, 1.56, .64, 1) .5s both; }
-  .reveal .say { text-align: center; font-size: 14px; color: var(--muted); margin-top: 8px; animation: rv-in .4s ease-out .9s both; }
-  .reveal.bad .pic { animation: rv-pop .6s cubic-bezier(.34, 1.56, .64, 1) both, rv-shake .45s ease-in-out .6s; }
-  .reveal .spark { position: absolute; width: 10px; height: 10px; border-radius: 50%; pointer-events: none; opacity: 0;
-                   animation: rv-spark .9s ease-out both; }
-  @keyframes rv-pop { 0% { transform: scale(.4) rotate(-8deg); opacity: 0; } 100% { transform: none; opacity: 1; } }
+  /* 小1 答完后：照原题截图的两栏竖排 —— 左「問題」、右「正解」（2026-11-10，APP_VERSION 10） */
+  .orig { display: flex; justify-content: space-between; gap: 16px; margin: 10px 0 18px; overflow-x: auto; }
+  .orig > div { flex: none; } .orig .o-head { white-space: nowrap; }
+  .orig .o-head { font-size: 13px; font-weight: 700; color: #8a8f94; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+  .orig .o-head.ok { color: #4fb3b1; }
+  .orig .o-head.ok::before { content: ''; width: 12px; height: 12px; border: 3px solid #4fb3b1; border-radius: 50%; }
+  .orig .o-v { writing-mode: vertical-rl; height: 400px; font-size: 19px; line-height: 2; letter-spacing: 2px;
+               color: #2a2d35; display: flex; flex-direction: column; justify-content: flex-start; gap: 14px; align-items: flex-start; position: relative; }
+  .orig .o-q { animation: rv-in .4s ease-out both; }
+  .orig .o-instr { flex: none; word-break: keep-all; }
+  .orig .o-pic { writing-mode: horizontal-tb; flex: none; width: 92px; display: flex; flex-direction: column; align-items: center; }
+  .orig .o-pic img { display: block; width: 100%; height: auto; }
+  .orig .o-word { writing-mode: vertical-rl; font-size: 40px; line-height: 1.25; margin-top: 10px; letter-spacing: 0; }
+  .orig .o-blank, .orig .o-fill { display: inline-block; width: 1.15em; height: 1.15em; border: 2px solid #4ea3dd;
+                                  box-sizing: border-box; margin-bottom: 8px; line-height: 1.05; text-align: center; }
+  .orig .o-fill { color: #d63fbf; }
+  .orig .o-fill b { display: inline-block; font-weight: 400; animation: rv-stamp .55s cubic-bezier(.34, 1.56, .64, 1) .7s both; }
+  .orig .o-choices { flex: none; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+  .orig .o-lab { font-size: 11px; color: #3c95cf; line-height: 1.4; letter-spacing: 3px; }
+  .orig .o-dot { border: 2px dotted #5aaee3; padding: 14px 6px; font-size: 30px; line-height: 1.6; letter-spacing: 8px; }
+  .orig .o-frame { border: 2px solid #5aaee3; border-radius: 8px; padding: 16px 12px; box-sizing: border-box;
+                   justify-content: flex-start; gap: 10px; }
+  .orig .o-a .o-frame { animation: rv-pop .55s cubic-bezier(.34, 1.56, .64, 1) .25s both; }
+  .orig .o-a .o-pic img { animation: rv-bob 2.6s ease-in-out 1.4s infinite; }
+  .orig.bad .o-a .o-pic { animation: rv-shake .45s ease-in-out 1s; }
+  .orig .k-lab { font-size: 11px; color: #3c95cf; letter-spacing: 3px; line-height: 1.4; }
+  .orig .k-lab::before { content: '▼'; display: inline-block; margin-bottom: 4px; }
+  .orig .k-txt { flex: none; }
+  .orig .xbox { display: inline-block; border: 1px solid #c9cdd0; padding: 3px 0; line-height: 1.25; margin: 2px 0; }
+  .orig .xpink { color: #d63fbf; }
+  .orig .xblank { display: inline-block; width: 0.95em; height: 0.95em; border: 2px solid #4ea3dd; box-sizing: border-box; margin: 2px 0; }
+  .orig .spark { position: absolute; width: 9px; height: 9px; border-radius: 50%; pointer-events: none; opacity: 0;
+                 animation: rv-spark .9s ease-out both; }
+  @keyframes rv-pop { 0% { transform: scale(.6); opacity: 0; } 100% { transform: none; opacity: 1; } }
   @keyframes rv-in { 0% { transform: translateY(10px); opacity: 0; } 100% { transform: none; opacity: 1; } }
-  @keyframes rv-stamp { 0% { transform: translateY(-60px) scale(1.8); opacity: 0; }
+  @keyframes rv-stamp { 0% { transform: translateY(-50px) scale(1.8); opacity: 0; }
                         60% { transform: translateY(0) scale(.85); opacity: 1; } 100% { transform: none; opacity: 1; } }
-  @keyframes rv-bob { 0%, 100% { transform: translateY(0) rotate(0); } 50% { transform: translateY(-4px) rotate(1.5deg); } }
+  @keyframes rv-bob { 0%, 100% { transform: translateY(0) rotate(0); } 50% { transform: translateY(-3px) rotate(1.5deg); } }
   @keyframes rv-shake { 0%, 100% { transform: none; } 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
   @keyframes rv-spark { 0% { transform: translate(0, 0) scale(.3); opacity: 1; }
                         100% { transform: translate(var(--dx), var(--dy)) scale(1); opacity: 0; } }
-  @media (max-width: 480px) { .reveal .word { font-size: 36px; } .reveal { padding: 12px; gap: 10px; } }
-  @media (prefers-reduced-motion: reduce) { .reveal *, .reveal { animation: none !important; } .reveal .spark { display: none; } }
+  @media (max-width: 480px) {
+    .orig { gap: 6px; }
+    .orig .o-v { gap: 7px; } .orig .o-head { font-size: 11px; }
+    .orig .o-v { height: 330px; font-size: 13px; line-height: 1.9; letter-spacing: 1px; }
+    .orig .o-pic { width: 48px; }
+    .orig .o-word { font-size: 26px; }
+    .orig .o-dot { font-size: 20px; padding: 10px 3px; letter-spacing: 4px; }
+    .orig .o-frame { padding: 12px 6px; gap: 6px; }
+    .orig .k-lab, .orig .o-lab { font-size: 9px; letter-spacing: 1px; }
+  }
+  @media (prefers-reduced-motion: reduce) { .orig *, .orig { animation: none !important; } .orig .spark { display: none; } }
 
   /* 列表 */
   .item { display: flex; align-items: center; gap: 12px; padding: 14px 0; border-bottom: 1px solid var(--line); }
@@ -219,7 +248,7 @@
   var STORE_KEY = 'jp-daily-v1';
   var REMOTE_KEY = 'jp-daily-remote-v1';
   // 改了 index.html / srs.js / install.bat 就把这个数 +1，并把 version.txt 改成同一个数
-  var APP_VERSION = 9;
+  var APP_VERSION = 10;
   var GH_API = 'https://api.github.com/repos/mxxs109-ops/japanese-learning-app/contents/';
   var INSTALL_CMD = 'curl -sL -o "%TEMP%\\jla.bat" https://raw.githubusercontent.com/mxxs109-ops/japanese-learning-app/main/install.bat && "%TEMP%\\jla.bat"';
 
@@ -328,7 +357,13 @@
     var t = teachOn() && TEACH[q.id];
     return (t && Array.isArray(t.options) && typeof t.options[i] === 'string') ? t.options[i] : q.options[i];
   }
-  function inline(s) { return esc(s).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>'); }
+  // 解析里的原题标记（照原题「こたえとかいせつ」）：□ = 蓝框空格，〔…〕 = 灰框，〈…〉 = 粉色（填进去的答案）
+  function inline(s) {
+    return esc(s).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')
+      .replace(/〈([^〈〉]+)〉/g, '<span class="xpink">$1</span>')
+      .replace(/〔([^〔〕]+)〕/g, '<span class="xbox">$1</span>')
+      .replace(/□/g, '<span class="xblank"></span>');
+  }
   function explHTML(lines) {
     var out = '', inList = false;
     lines.forEach(function (l) {
@@ -433,26 +468,37 @@
       ' onerror="if(this.dataset.remote){this.src=this.dataset.remote;this.dataset.remote=\'\';}else{this.parentNode.style.display=\'none\';}"></div>';
   }
 
-  // 小1：答完后左边整张插图、右边把答案填进 □（带小动画）。只有 小1 + 有插图 + 句子里有 □ 才出现
+  // 小1：答完后照原题截图显示两栏竖排 —— 左「問題」（题干 / 插图 + □る / せんたくし），右「正解」（こたえと かいせつ）。
+  //   只有 小1 + 有插图 + 句子里有 □ 才出现；出任何错返回空 = 页面和以前一样
   function revealHTML(q, ok) {
     try {
       if (q.level !== '小1' || !imageHTML(q) || String(q.sentence).indexOf('□') < 0) return '';
-      var img = imageHTML(q).replace('class="qimg"', 'class="pic"');
-      var word = esc(q.sentence).replace('□', '<span class="box"><b>' + esc(q.options[q.answer]) + '</b></span>');
-      var full = String(q.sentence).replace('□', q.options[q.answer]);
+      var img = imageHTML(q).replace('<div class="qimg">', '').replace(/<\/div>$/, '');
+      var k = q.kaisetsu || {};
+      var ans = esc(q.options[q.answer]);
       var sparks = '';
       if (ok) {
         var colors = ['#69bdbc', '#d63fbf', '#f2b134', '#4ea3dd'];
         for (var i = 0; i < 12; i++) {
-          var a = i / 12 * Math.PI * 2, d = 50 + (i % 3) * 18;
-          sparks += '<i class="spark" style="left:72%;top:45%;background:' + colors[i % 4] +
+          var a = i / 12 * Math.PI * 2, d = 40 + (i % 3) * 16;
+          sparks += '<i class="spark" style="right:50%;top:62%;background:' + colors[i % 4] +
             ';--dx:' + Math.round(Math.cos(a) * d) + 'px;--dy:' + Math.round(Math.sin(a) * d) +
-            'px;animation-delay:' + (0.75 + (i % 3) * 0.05).toFixed(2) + 's"></i>';
+            'px;animation-delay:' + (0.95 + (i % 3) * 0.05).toFixed(2) + 's"></i>';
         }
       }
-      return '<div class="reveal' + (ok ? '' : ' bad') + '">' + img +
-        '<div><div class="word">' + word + '</div><div class="say">' + (ok ? 'せいかい！' : 'こたえは') +
-        '「' + esc(full) + '」</div></div>' + sparks + '</div>';
+      var left = '<div class="o-q"><div class="o-head">問題（もんだい）</div><div class="o-v">' +
+        '<div class="o-instr">' + inline(q.instruction) + '</div>' +
+        '<div class="o-pic">' + img + '<div class="o-word">' + esc(q.sentence).replace('□', '<span class="o-blank"></span>') + '</div></div>' +
+        '<div class="o-choices"><div class="o-lab">せんたくし</div><div class="o-dot">' +
+        q.options.map(esc).join('・') + '</div></div></div></div>';
+      var right = '<div class="o-a"><div class="o-head ok">正解（せいかい）</div><div class="o-v o-frame">' +
+        '<div class="k-lab">こたえと　かいせつ</div>' +
+        '<div>こたえ…' + esc(k.answer || q.options[q.answer]) + '</div>' +
+        '<div class="o-pic">' + img + '<div class="o-word">' +
+        esc(q.sentence).replace('□', '<span class="o-fill"><b>' + ans + '</b></span>') + '</div></div>' +
+        (typeof k.text === 'string' ? '<div class="k-txt">' + inline(k.text) + '</div>' : '') +
+        sparks + '</div></div>';
+      return '<div class="orig' + (ok ? '' : ' bad') + '">' + left + right + '</div>';
     } catch (e) { return ''; }
   }
 
@@ -463,11 +509,13 @@
     var tag = r.status === 'learning' ? '<span class="tag bad">错题 ' + r.streak + '/' + SRS.MAX_STREAK + '</span>'
       : r.status === 'new' ? '<span class="tag">新题</span>' : '';
     if (ans != null) tag = '';
+    // 小1 答完后：原来的题干/插图换成原题样式的两栏（左 問題 / 右 正解），选项按钮留在最下面
+    var orig = ans != null ? revealHTML(q, ans === q.answer) : '';
     var h = '<div class="card"><div class="qtop"><span class="lv ' + esc(q.level) + '">' + esc(q.level) + '</span>' +
       '<span class="sec">' + esc(q.section) + '</span>' + tag +
       '<span class="progress">' + (s.idx + 1) + ' / ' + s.queue.length + '</span></div>' +
-      '<p class="instr">' + sentenceHTML(tText(q, 'instruction')) + '</p>' +
-      '<div class="sentence">' + sentenceHTML(tText(q, 'sentence')) + '</div>' + imageHTML(q) +
+      (orig || ('<p class="instr">' + sentenceHTML(tText(q, 'instruction')) + '</p>' +
+      '<div class="sentence">' + sentenceHTML(tText(q, 'sentence')) + '</div>' + imageHTML(q))) +
       '<div class="opts' + (q.options.some(function (o) { return String(o).length > 10; }) ? ' long' : '') + '">';
     q.options.forEach(function (o, i) {
       var cls = '';
@@ -480,7 +528,7 @@
       var ok = ans === q.answer;
       h += '<div class="card"><div class="verdict ' + (ok ? 'ok' : 'bad') + '"><span class="dot"></span>' +
         (ok ? '正确' : '错误 · 正确答案是 ' + (q.answer + 1) + ' ' + esc(q.options[q.answer])) + '</div>' +
-        '<div class="sched">' + schedText(s.after) + '</div>' + revealHTML(q, ok) +
+        '<div class="sched">' + schedText(s.after) + '</div>' +
         '<div class="expl">' + explHTML(q.explanation) + '</div>' +
         '<div class="next"><button class="btn" data-act="next">' + (s.idx + 1 < s.queue.length ? '下一题' : '完成') + '</button></div></div>';
     }
