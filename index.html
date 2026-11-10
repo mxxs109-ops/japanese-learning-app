@@ -97,6 +97,9 @@
   .chip.on.N1 { background: #5dae98; border-color: #5dae98; color: #fff; }
   .lv.N5 { background: var(--n5); } .lv.N4 { background: var(--n4); }
   .lv.N3 { background: #856ea5; } .lv.N2 { background: #e68329; } .lv.N1 { background: #5dae98; }
+  /* 小1 こくご（小学一年级国语）：颜色取自原题网站的「正解」绿 */
+  .lv.小1 { background: #69bdbc; }
+  .chip.on.小1 { background: #69bdbc; border-color: #69bdbc; color: #fff; }
   .sec { font-size: 13px; color: var(--muted); }
   .progress { margin-left: auto; font-size: 12px; color: var(--muted); }
   .tag { font-size: 11px; padding: 2px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); }
@@ -111,6 +114,9 @@
   .instr { line-height: 2.3; }
   .opt rt { font-size: 0.6em; }
   .opts { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  /* 选项是整句（言い換え类）：一行一个，只在空格处断行 */
+  .opts.long { grid-template-columns: 1fr; }
+  .opts.long .opt { word-break: keep-all; overflow-wrap: anywhere; }
   .opt { border: 1px solid var(--line); background: var(--card); color: var(--ink); font: inherit; font-size: 18px;
          padding: 15px 14px; border-radius: 14px; cursor: pointer; text-align: left; display: flex; gap: 12px;
          align-items: center; transition: border-color .15s, background .15s; }
@@ -185,7 +191,7 @@
   var STORE_KEY = 'jp-daily-v1';
   var REMOTE_KEY = 'jp-daily-remote-v1';
   // 改了 index.html / srs.js / install.bat 就把这个数 +1，并把 version.txt 改成同一个数
-  var APP_VERSION = 7;
+  var APP_VERSION = 8;
   var GH_API = 'https://api.github.com/repos/mxxs109-ops/japanese-learning-app/contents/';
   var INSTALL_CMD = 'curl -sL -o "%TEMP%\\jla.bat" https://raw.githubusercontent.com/mxxs109-ops/japanese-learning-app/main/install.bat && "%TEMP%\\jla.bat"';
 
@@ -410,7 +416,8 @@
       '<span class="sec">' + esc(q.section) + '</span>' + tag +
       '<span class="progress">' + (s.idx + 1) + ' / ' + s.queue.length + '</span></div>' +
       '<p class="instr">' + sentenceHTML(tText(q, 'instruction')) + '</p>' +
-      '<div class="sentence">' + sentenceHTML(tText(q, 'sentence')) + '</div>' + imageHTML(q) + '<div class="opts">';
+      '<div class="sentence">' + sentenceHTML(tText(q, 'sentence')) + '</div>' + imageHTML(q) +
+      '<div class="opts' + (q.options.some(function (o) { return String(o).length > 10; }) ? ' long' : '') + '">';
     q.options.forEach(function (o, i) {
       var cls = '';
       if (ans != null) cls = i === q.answer ? 'ok' : (i === ans ? 'bad' : 'dim');
@@ -461,7 +468,7 @@
   }
 
   // 题库级别筛选（可多选；空 = 全部）。只管题库列表和「复习」，不影响「今日」
-  var LEVELS = ['N5', 'N4', 'N3', 'N2', 'N1'];
+  var LEVELS = ['小1', 'N5', 'N4', 'N3', 'N2', 'N1'];
   function levelOK(q) { var L = state.levels || []; return !L.length || L.indexOf(q.level) >= 0; }
   function chipsHTML() {
     var L = state.levels || [];
@@ -516,7 +523,7 @@
       if (lv === 'ALL') L = [];
       else if (i >= 0) L.splice(i, 1);
       else if (LEVELS.indexOf(lv) >= 0) L.push(lv);
-      if (L.length === LEVELS.length) L = [];   // 五个全选 = 全部
+      if (L.length === LEVELS.length) L = [];   // 全部选上 = 全部
       state.levels = L; save(); render();
     }
     else if (act === 'pick' && session && session.answer == null) {

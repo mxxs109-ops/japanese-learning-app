@@ -283,6 +283,21 @@ window.QUESTIONS = [
       '- 2 **奇妙だ**：奇怪、不可思议，和"复杂难懂"不是一回事。',
       '- 4 **簡潔だ**：简洁、简明扼要，正好是反义词。'
     ]
+  },
+  {
+    id: 'sho1-hiragana1-tsuru',
+    date: '2026-11-10',
+    level: '小1',
+    section: 'こくご　ひらがな（1）ひらがな1',
+    instruction: 'えを　みて、□に　あう　ひらがなを　えらびましょう。',
+    sentence: '□る',
+    image: 'images/sho1-hiragana1-tsuru.png',
+    options: ['つ', 'へ', 'て'],
+    answer: 0,
+    explanation: [
+      '图中画的是一只丹顶鹤，日语叫「**つる**」（鹤），所以空格里填「つ」，组成「つる」。',
+      '原题解说：□に　つ　を　いれて、つるだよ。'
+    ]
   }
 ];
 
