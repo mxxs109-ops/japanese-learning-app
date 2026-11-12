@@ -280,7 +280,7 @@
   var STORE_KEY = 'jp-daily-v1';
   var REMOTE_KEY = 'jp-daily-remote-v1';
   // 改了 index.html / srs.js / install.bat 就把这个数 +1，并把 version.txt 改成同一个数
-  var APP_VERSION = 14;
+  var APP_VERSION = 15;
   var GH_API = 'https://api.github.com/repos/mxxs109-ops/japanese-learning-app/contents/';
   var INSTALL_CMD = 'curl -sL -o "%TEMP%\\jla.bat" https://raw.githubusercontent.com/mxxs109-ops/japanese-learning-app/main/install.bat && "%TEMP%\\jla.bat"';
 
@@ -584,7 +584,7 @@
     if (ans != null) {
       var ok = ans === q.answer;
       h += '<div class="card"><div class="verdict ' + (ok ? 'ok' : 'bad') + '"><span class="dot"></span>' +
-        (ok ? '正确' : '错误 · 正确答案是 ' + (q.answer + 1) + ' ' + esc(q.options[q.answer])) + '</div>' +
+        (ok ? '正确' : '错误 · 正确答案是 ' + (q.answer + 1) + ' ' + sentenceHTML(q.options[q.answer])) + '</div>' +
         '<div class="sched">' + schedText(s.after) + '</div>' +
         '<div class="expl">' + explHTML(q.explanation) + '</div>' +
         '<div class="next"><button class="btn" data-act="next">' + (s.idx + 1 < s.queue.length ? '下一题' : '完成') + '</button></div></div>';
@@ -616,7 +616,7 @@
       var r = rec(q.id);
       h += '<div class="item"><span class="lv ' + esc(q.level) + '">' + esc(q.level) + '</span><div class="main">' +
         '<div class="s">' + listSentence(q) + '</div>' +
-        '<div class="m">' + dots(r.streak) + r.streak + '/' + SRS.MAX_STREAK + ' · 答案 ' + esc(q.options[q.answer]) +
+        '<div class="m">' + dots(r.streak) + r.streak + '/' + SRS.MAX_STREAK + ' · 答案 ' + sentenceHTML(q.options[q.answer]) +
         ' · 错过 ' + r.wrongCount + ' 次 · 下次 ' + whenText(r.due) + '</div></div>' +
         '<button class="btn ghost small" data-act="free-one" data-id="' + esc(q.id) + '">练</button></div>';
     });
