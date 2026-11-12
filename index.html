@@ -118,6 +118,13 @@
   .pask rt { font-size: 0.55em; }
   .asktag { display: inline-block; background: #1d1d1f; color: #fff; font-size: 0.85em; line-height: 1.6; padding: 0 8px; margin-right: 10px; border-radius: 3px; }
   .qimg.big { margin: 0 0 22px; }
+  /* 听力题播放器：只能听一次，进度条只显示不能拖 */
+  .aud { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 0 0 26px; }
+  .aud .btn[disabled] { opacity: .45; cursor: default; }
+  .abar { flex: 1; min-width: 120px; height: 6px; background: #e6e2da; border-radius: 3px; overflow: hidden; }
+  .abar i { display: block; height: 100%; width: 0; background: #1d1d1f; transition: width .25s linear; }
+  .atime { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; min-width: 72px; }
+  .anote { width: 100%; font-size: 12px; color: var(--muted); }
   .qimg.big img { max-height: none; border: 1px solid #ddd8ce; }
   .qimg { text-align: center; margin: -14px 0 26px; }
   .qimg img { max-width: 100%; max-height: 240px; border-radius: 10px; background: #fff; }
@@ -280,7 +287,7 @@
   var STORE_KEY = 'jp-daily-v1';
   var REMOTE_KEY = 'jp-daily-remote-v1';
   // 改了 index.html / srs.js / install.bat 就把这个数 +1，并把 version.txt 改成同一个数
-  var APP_VERSION = 15;
+  var APP_VERSION = 16;
   var GH_API = 'https://api.github.com/repos/mxxs109-ops/japanese-learning-app/contents/';
   var INSTALL_CMD = 'curl -sL -o "%TEMP%\\jla.bat" https://raw.githubusercontent.com/mxxs109-ops/japanese-learning-app/main/install.bat && "%TEMP%\\jla.bat"';
 
@@ -399,8 +406,66 @@
       imageHTML(q).replace('class="qimg"', 'class="qimg big"') +
       (ask ? '<div class="pask">' + blankHTML(ask, fill) + '</div>' : '');
   }
+  // ---------- 听力题（layout: 'listening'）：说明 → 选项图（原尺寸）→ 播放器。只能听一次 ----------
+  //   一次 = 同一轮练习里这道题只能点一次播放；播放中、播完都不能再点，进度条不能拖。
+  //   本地 audio/ 没有（旧安装）就从 GitHub 读；一声都没放出来就失败的，不算听过，可以再点
+  function isListen(q) { return q.layout === 'listening' && typeof q.audio === 'string' && /^audio\/[\w.\-]+$/.test(q.audio); }
+  var AUD = null, AUDQ = null;
+  function stopAudio() { if (AUD) { try { AUD.pause(); } catch (e) {} } AUD = null; AUDQ = null; }
+  function audState(q) { return (session && session.played && session.played[q.id]) || ''; }
+  function fmtSec(t) { t = Math.max(0, Math.floor(t || 0)); return Math.floor(t / 60) + ':' + ('0' + t % 60).slice(-2); }
+  function audioBlockHTML(q) {
+    var st = audState(q), live = AUD && AUDQ === q.id;
+    var pct = live && AUD.duration ? Math.min(100, AUD.currentTime / AUD.duration * 100) : (st === 'done' ? 100 : 0);
+    var label = st === 'playing' ? '播放中…' : st === 'done' ? '已听完' : '▶ 播放';
+    var note = session && session.audErr === q.id ? '播放失败（没有网络？），这次不算听过，可以再点一次'
+      : st === 'done' ? '只能听一次，已经听完了' : '只能听一次，点了就开始';
+    return '<div class="aud" id="aud"><button class="btn" data-act="play"' + (st ? ' disabled' : '') + '>' + label + '</button>' +
+      '<div class="abar"><i id="abarFill" style="width:' + pct.toFixed(1) + '%"></i></div>' +
+      '<span class="atime" id="atime">' + (live ? fmtSec(AUD.currentTime) + ' / ' + fmtSec(AUD.duration) : '') + '</span>' +
+      '<div class="anote">' + note + '</div></div>';
+  }
+  function refreshAudio(q) {
+    var el = document.getElementById('aud');
+    if (el && session && QMAP[session.queue[session.idx]] === q) el.outerHTML = audioBlockHTML(q);
+  }
+  function playAudio(q) {
+    session.played = session.played || {};
+    if (session.played[q.id]) return;
+    session.played[q.id] = 'playing'; session.audErr = null;
+    stopAudio();
+    var a = new Audio(), started = false, remoteTried = false;
+    var remote = 'https://raw.githubusercontent.com/mxxs109-ops/japanese-learning-app/main/' + q.audio;
+    AUD = a; AUDQ = q.id;
+    function fail() {
+      if (AUD !== a) return;
+      if (!started) { delete session.played[q.id]; session.audErr = q.id; }
+      else session.played[q.id] = 'done';
+      stopAudio(); refreshAudio(q);
+    }
+    a.addEventListener('playing', function () { started = true; });
+    a.addEventListener('timeupdate', function () {
+      if (AUD !== a) return;
+      var f = document.getElementById('abarFill'), t = document.getElementById('atime');
+      if (f && a.duration) f.style.width = Math.min(100, a.currentTime / a.duration * 100).toFixed(1) + '%';
+      if (t) t.textContent = fmtSec(a.currentTime) + ' / ' + fmtSec(a.duration);
+    });
+    a.addEventListener('ended', function () { if (AUD !== a) return; session.played[q.id] = 'done'; stopAudio(); refreshAudio(q); });
+    a.addEventListener('error', function () {
+      if (AUD !== a) return;
+      if (!started && !remoteTried) { remoteTried = true; a.src = remote; a.play().catch(function () {}); }
+      else fail();
+    });
+    a.src = q.audio;
+    a.play().catch(function () {});
+    refreshAudio(q);
+  }
+  function listenHTML(q) {
+    return '<p class="instr">' + sentenceHTML(tText(q, 'instruction')) + '</p>' +
+      imageHTML(q).replace('class="qimg"', 'class="qimg big"') + audioBlockHTML(q);
+  }
   function listSentence(q) {
-    return (isPassage(q) && typeof q.brief === 'string') ? blankHTML(q.brief, null) : sentenceHTML(tText(q, 'sentence'));
+    return ((isPassage(q) || isListen(q)) && typeof q.brief === 'string') ? blankHTML(q.brief, null) : sentenceHTML(tText(q, 'sentence'));
   }
   // 教学模式：有注音版就用注音版，没有就用原文
   function teachOn() { return !!state.teach; }
@@ -569,7 +634,7 @@
     var h = '<div class="card"><div class="qtop"><span class="lv ' + esc(q.level) + '">' + esc(q.level) + '</span>' +
       '<span class="sec">' + esc(q.section) + '</span>' + tag +
       '<span class="progress">' + (s.idx + 1) + ' / ' + s.queue.length + '</span></div>' +
-      (orig || (isPassage(q)
+      (orig || (isListen(q) ? listenHTML(q) : isPassage(q)
         ? passageHTML(q, ans)
         : '<p class="instr">' + sentenceHTML(tText(q, 'instruction')) + '</p>' +
           '<div class="sentence">' + sentenceHTML(tText(q, 'sentence')) + '</div>' + imageHTML(q))) +
@@ -667,7 +732,7 @@
   document.addEventListener('click', function (e) {
     var t = e.target.closest('[data-act],[data-v]');
     if (!t) return;
-    if (t.dataset.v) { session = null; view = t.dataset.v; render(); return; }
+    if (t.dataset.v) { stopAudio(); session = null; view = t.dataset.v; render(); return; }
     var act = t.dataset.act;
     if (act === 'start-daily') startSession(SRS.dailyQueue(Q, state.records, TODAY), 'daily');
     else if (act === 'go-all') { view = 'all'; render(); }
@@ -691,8 +756,9 @@
       session.answer = i; session.after = state.records[q.id]; session.results.push(ok);
       render();
     }
-    else if (act === 'next') { session.idx++; session.answer = null; session.after = null; render(); window.scrollTo(0, 0); }
-    else if (act === 'end') { session = null; view = 'home'; render(); }
+    else if (act === 'play' && session) { var pq = QMAP[session.queue[session.idx]]; if (pq && isListen(pq)) playAudio(pq); }
+    else if (act === 'next') { stopAudio(); session.idx++; session.answer = null; session.after = null; render(); window.scrollTo(0, 0); }
+    else if (act === 'end') { stopAudio(); session = null; view = 'home'; render(); }
     else if (act === 'check-update') checkUpdate(true);
     else if (act === 'teach') { state.teach = !state.teach; save(); render(); }
     else if (act === 'copy-cmd') copyCmd();
