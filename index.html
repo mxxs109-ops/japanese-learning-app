@@ -121,7 +121,8 @@
   /* 试卷 */
   .exam-sub { font-size: 13px; color: var(--muted); margin: 6px 0 0; }
   .exam-part { font-size: 14px; font-weight: 600; margin: 4px 0 10px; padding: 8px 14px; border-radius: 10px; background: #e8eefb; color: #2f4f8f; }
-  .opt.sel { border-color: #1d1d1f; background: #f0eee8; }
+  .exam-timer { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; margin-left: 8px; }
+  .exam-verdict { margin: 16px 0 0; }
   .exam-no { min-width: 44px; font-weight: 600; font-size: 14px; }
   .exam-no.ok { color: #1f9d6b; }
   .exam-no.bad { color: #d64545; }
@@ -295,7 +296,7 @@
   var STORE_KEY = 'jp-daily-v1';
   var REMOTE_KEY = 'jp-daily-remote-v1';
   // 改了 index.html / srs.js / install.bat 就把这个数 +1，并把 version.txt 改成同一个数
-  var APP_VERSION = 17;
+  var APP_VERSION = 18;
   var GH_API = 'https://api.github.com/repos/mxxs109-ops/japanese-learning-app/contents/';
   var INSTALL_CMD = 'curl -sL -o "%TEMP%\\jla.bat" https://raw.githubusercontent.com/mxxs109-ops/japanese-learning-app/main/install.bat && "%TEMP%\\jla.bat"';
 
@@ -653,8 +654,9 @@
       h += '<div class="card exam-card"><div class="head"><h3>' + esc(ex.title) + '</h3>' +
         '<button class="btn" data-act="start-exam" data-id="' + esc(ex.id) + '">开始</button></div>' +
         '<p class="exam-sub">' + n + ' 题 · ' + ex.parts.map(function (p) { return esc(p.name) + ' ' + p.ids.length; }).join(' / ') +
-        ' · 按原题顺序，交卷后看答案</p>' +
-        (last ? '<p class="exam-sub">上次：' + fmtDate(last.date) + ' · ' + last.score + ' / ' + last.total + '</p>' : '') + '</div>';
+        ' · 按原题顺序 · 每题答完马上看对错，不能改 · 计时不限时</p>' +
+        (last ? '<p class="exam-sub">上次：' + fmtDate(last.date) + ' · ' + last.score + ' / ' + last.total +
+          (last.ms ? ' · 用时 ' + fmtDur(last.ms) : '') + '</p>' : '') + '</div>';
     });
     return h;
   }
@@ -668,18 +670,45 @@
     var h = (first ? '<div class="exam-part">第 ' + (k + 1) + ' 部分 · ' + esc(part.name) + '</div>' : '') +
       '<div class="card"><div class="qtop"><span class="lv ' + esc(q.level) + '">' + esc(q.level) + '</span>' +
       '<span class="sec">' + esc(q.section) + '</span>' +
+      '<span class="exam-timer" id="exTimer">⏱ ' + fmtDur(examElapsed()) + '</span>' +
       '<span class="progress">第 ' + (s.idx + 1) + ' 题 / 共 ' + s.queue.length + ' 题</span></div>' +
-      (isListen(q) ? listenHTML(q) : isPassage(q) ? passageHTML(q, null)
+      (isListen(q) ? listenHTML(q) : isPassage(q) ? passageHTML(q, ans)
         : '<p class="instr">' + sentenceHTML(tText(q, 'instruction')) + '</p>' +
           '<div class="sentence">' + sentenceHTML(tText(q, 'sentence')) + '</div>' + imageHTML(q)) +
       '<div class="opts' + (q.options.some(function (o) { return String(o).length > 10; }) ? ' long' : '') + '">';
     q.options.forEach(function (o, i) {
-      h += '<button class="opt' + (ans === i ? ' sel' : '') + '" data-act="pick" data-i="' + i + '">' +
+      var cls = ans == null ? '' : i === q.answer ? ' ok' : (i === ans ? ' bad' : ' dim');
+      h += '<button class="opt' + cls + '" data-act="pick" data-i="' + i + '"' + (ans != null ? ' disabled' : '') + '>' +
         '<span class="n">' + (i + 1) + '</span><span>' + sentenceHTML(tOption(q, i)) + '</span></button>';
     });
-    h += '</div>' + (ans != null ? '<div class="next"><button class="btn" data-act="exam-next">' +
-      (s.idx + 1 < s.queue.length ? '下一题' : '交卷') + '</button></div>' : '') + '</div>';
-    return h;
+    h += '</div>';
+    if (ans != null) {
+      var ok = ans === q.answer;
+      h += '<div class="verdict ' + (ok ? 'ok' : 'bad') + ' exam-verdict"><span class="dot"></span>' +
+        (ok ? '正确' : '错误 · 正确答案是 ' + (q.answer + 1) + ' ' + sentenceHTML(q.options[q.answer])) + '</div>' +
+        '<div class="next"><button class="btn" data-act="exam-next">' + (s.idx + 1 < s.queue.length ? '下一题' : '交卷') + '</button></div>';
+    }
+    return h + '</div>';
+  }
+  // 计时：从开始算，不限时；交卷时停
+  function examElapsed() { var s = session; return s ? (s.end || Date.now()) - s.start : 0; }
+  function fmtDur(ms) {
+    var t = Math.max(0, Math.floor(ms / 1000)), h = Math.floor(t / 3600), m = Math.floor(t / 60) % 60, x = t % 60;
+    return (h ? h + ':' + ('0' + m).slice(-2) : m) + ':' + ('0' + x).slice(-2);
+  }
+  setInterval(function () {
+    if (!session || session.mode !== 'exam' || session.end) return;
+    var el = document.getElementById('exTimer');
+    if (el) el.textContent = '⏱ ' + fmtDur(examElapsed());
+  }, 1000);
+  // 选了就定：马上记分、显示对错，不能改（照官网样题）
+  function examPick(i) {
+    var s = session, id = s.queue[s.idx], q = QMAP[id], ok = i === q.answer;
+    if (s.answer != null) return;
+    s.answer = i; s.picks[id] = i; s.results.push(ok);
+    // 试卷按「手动练习」记：做对不计连对；做错照样进错题集（和题库「练」一样）
+    state.records[id] = SRS.applyAnswer(state.records[id], ok, TODAY, 'free');
+    save(); render();
   }
   function examResultHTML() {
     var s = session, ex = s.exam, score = 0, total = s.queue.length;
@@ -693,7 +722,7 @@
         '<button class="btn ghost small" data-act="exam-view" data-id="' + esc(id) + '">' + (s.open[id] ? '收起' : '看解析') + '</button></div>' +
         (s.open[id] ? '<div class="expl exam-expl">' + explHTML(q.explanation) + '</div>' : '');
     });
-    return '<div class="card hero"><h2>' + score + ' / ' + total + '</h2><p>' + esc(ex.title) + '</p>' +
+    return '<div class="card hero"><h2>' + score + ' / ' + total + '</h2><p>' + esc(ex.title) + ' · 用时 ' + fmtDur(examElapsed()) + '</p>' +
       '<p>' + ex.parts.map(function (p, k) { return esc(p.name) + ' ' + partScore[k] + ' / ' + p.ids.length; }).join('　') + '</p>' +
       '<button class="btn" data-act="end">返回</button></div>' +
       '<div class="card"><div class="head"><h3>每道题</h3></div>' + rows + '</div>';
@@ -701,22 +730,22 @@
   function startExam(ex) {
     if (!ex || !examReady(ex)) return;
     stopAudio();
-    session = { queue: examIds(ex), idx: 0, mode: 'exam', exam: ex, answer: null, after: null, results: [], picks: {}, open: {} };
+    session = { queue: examIds(ex), idx: 0, mode: 'exam', exam: ex, answer: null, after: null, results: [], picks: {}, open: {},
+      start: Date.now(), end: 0 };
     render(); window.scrollTo(0, 0);
   }
   function examNext() {
-    var s = session, id = s.queue[s.idx], q = QMAP[id], ok = s.answer === q.answer;
-    s.picks[id] = s.answer;
-    // 试卷按「手动练习」记：做对不计连对；做错照样进错题集（和题库「练」一样）
-    state.records[id] = SRS.applyAnswer(state.records[id], ok, TODAY, 'free');
-    s.results.push(ok);
+    var s = session;
+    if (s.answer == null) return;
     stopAudio();
     s.idx++; s.answer = null;
     if (s.idx >= s.queue.length) {
+      s.end = Date.now();
       state.exams = state.exams || {};
-      state.exams[s.exam.id] = { date: TODAY, score: s.results.filter(Boolean).length, total: s.queue.length };
+      state.exams[s.exam.id] = { date: TODAY, score: s.results.filter(Boolean).length, total: s.queue.length, ms: s.end - s.start };
+      save();
     }
-    save(); render(); window.scrollTo(0, 0);
+    render(); window.scrollTo(0, 0);
   }
 
   function quizHTML() {
@@ -846,7 +875,7 @@
       state.levels = L; save(); render();
     }
     else if (act === 'start-exam') startExam(EXAMS.filter(function (x) { return x.id === t.dataset.id; })[0]);
-    else if (act === 'pick' && session && session.mode === 'exam') { session.answer = Number(t.dataset.i); render(); }
+    else if (act === 'pick' && session && session.mode === 'exam') examPick(Number(t.dataset.i));
     else if (act === 'exam-next' && session && session.mode === 'exam' && session.answer != null) examNext();
     else if (act === 'exam-view' && session && session.mode === 'exam') { session.open[t.dataset.id] = !session.open[t.dataset.id]; render(); }
     else if (act === 'pick' && session && session.answer == null) {
