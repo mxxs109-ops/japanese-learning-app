@@ -114,6 +114,11 @@
   .pblank { display: inline-block; min-width: 4.5em; height: 1.5em; line-height: 1.4em; padding: 0 6px; vertical-align: middle;
     border: 2px solid #e05252; border-radius: 3px; text-align: center; white-space: nowrap; }
   .pblank.fill { border-color: #1f9d6b; color: #1f9d6b; font-weight: 600; }
+  .pask { font-size: 18px; line-height: 2.3; margin: 0 0 26px; }
+  .pask rt { font-size: 0.55em; }
+  .asktag { display: inline-block; background: #1d1d1f; color: #fff; font-size: 0.85em; line-height: 1.6; padding: 0 8px; margin-right: 10px; border-radius: 3px; }
+  .qimg.big { margin: 0 0 22px; }
+  .qimg.big img { max-height: none; border: 1px solid #ddd8ce; }
   .qimg { text-align: center; margin: -14px 0 26px; }
   .qimg img { max-width: 100%; max-height: 240px; border-radius: 10px; background: #fff; }
   rt { font-size: 0.45em; }
@@ -275,7 +280,7 @@
   var STORE_KEY = 'jp-daily-v1';
   var REMOTE_KEY = 'jp-daily-remote-v1';
   // 改了 index.html / srs.js / install.bat 就把这个数 +1，并把 version.txt 改成同一个数
-  var APP_VERSION = 13;
+  var APP_VERSION = 14;
   var GH_API = 'https://api.github.com/repos/mxxs109-ops/japanese-learning-app/contents/';
   var INSTALL_CMD = 'curl -sL -o "%TEMP%\\jla.bat" https://raw.githubusercontent.com/mxxs109-ops/japanese-learning-app/main/install.bat && "%TEMP%\\jla.bat"';
 
@@ -380,7 +385,19 @@
   function isPassage(q) { return q.layout === 'passage'; }
   function blankHTML(s, fill) {
     return sentenceHTML(s).replace(/□/g, fill == null ? '<span class="pblank"></span>'
-      : '<span class="pblank fill">' + sentenceHTML(fill) + '</span>');
+      : '<span class="pblank fill">' + sentenceHTML(fill) + '</span>')
+      .replace(/【しつもん】/g, '<span class="asktag">しつもん</span>');
+  }
+  // 文章题的题目区：说明 → 文章框 → 插图（原尺寸，不缩小）→ 【しつもん】那句（从文章里拆出来，放在框外，照原题）
+  //   老版本不拆，【しつもん】留在文章末尾 —— 内容一样
+  function passageHTML(q, ans) {
+    var fill = ans != null ? q.options[q.answer] : null;
+    var txt = String(tText(q, 'sentence')), k = txt.lastIndexOf('【しつもん】'), body = txt, ask = '';
+    if (k > 0) { body = txt.slice(0, k).replace(/\s+$/, ''); ask = txt.slice(k); }
+    return '<p class="instr">' + blankHTML(tText(q, 'instruction'), null) + '</p>' +
+      '<div class="passage">' + blankHTML(body, fill) + '</div>' +
+      imageHTML(q).replace('class="qimg"', 'class="qimg big"') +
+      (ask ? '<div class="pask">' + blankHTML(ask, fill) + '</div>' : '');
   }
   function listSentence(q) {
     return (isPassage(q) && typeof q.brief === 'string') ? blankHTML(q.brief, null) : sentenceHTML(tText(q, 'sentence'));
@@ -553,8 +570,7 @@
       '<span class="sec">' + esc(q.section) + '</span>' + tag +
       '<span class="progress">' + (s.idx + 1) + ' / ' + s.queue.length + '</span></div>' +
       (orig || (isPassage(q)
-        ? '<p class="instr">' + blankHTML(tText(q, 'instruction'), null) + '</p>' +
-          '<div class="passage">' + blankHTML(tText(q, 'sentence'), ans != null ? q.options[q.answer] : null) + '</div>' + imageHTML(q)
+        ? passageHTML(q, ans)
         : '<p class="instr">' + sentenceHTML(tText(q, 'instruction')) + '</p>' +
           '<div class="sentence">' + sentenceHTML(tText(q, 'sentence')) + '</div>' + imageHTML(q))) +
       '<div class="opts' + (q.options.some(function (o) { return String(o).length > 10; }) ? ' long' : '') + '">';
