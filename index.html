@@ -296,7 +296,7 @@
   var STORE_KEY = 'jp-daily-v1';
   var REMOTE_KEY = 'jp-daily-remote-v1';
   // 改了 index.html / srs.js / install.bat 就把这个数 +1，并把 version.txt 改成同一个数
-  var APP_VERSION = 18;
+  var APP_VERSION = 19;
   var GH_API = 'https://api.github.com/repos/mxxs109-ops/japanese-learning-app/contents/';
   var INSTALL_CMD = 'curl -sL -o "%TEMP%\\jla.bat" https://raw.githubusercontent.com/mxxs109-ops/japanese-learning-app/main/install.bat && "%TEMP%\\jla.bat"';
 
@@ -438,9 +438,9 @@
   function audioBlockHTML(q) {
     var st = audState(q), live = AUD && AUDQ === q.id;
     var pct = live && AUD.duration ? Math.min(100, AUD.currentTime / AUD.duration * 100) : (st === 'done' ? 100 : 0);
-    var label = st === 'playing' ? '播放中…' : st === 'done' ? '已听完' : '▶ 播放';
-    var note = session && session.audErr === q.id ? '播放失败（没有网络？），这次不算听过，可以再点一次'
-      : st === 'done' ? '只能听一次，已经听完了' : '只能听一次，点了就开始';
+    var label = st === 'playing' ? '再生中…' : st === 'done' ? '再生済み' : '▶ 再生';
+    var note = session && session.audErr === q.id ? '再生できませんでした（ネット接続を確認してください）。もう一度押せます'
+      : st === 'done' ? '音声は一回しか聞けません。もう聞き終わりました' : '音声は一回しか聞けません。押すとすぐ始まります';
     return '<div class="aud" id="aud"><button class="btn" data-act="play"' + (st ? ' disabled' : '') + '>' + label + '</button>' +
       '<div class="abar"><i id="abarFill" style="width:' + pct.toFixed(1) + '%"></i></div>' +
       '<span class="atime" id="atime">' + (live ? fmtSec(AUD.currentTime) + ' / ' + fmtSec(AUD.duration) : '') + '</span>' +
@@ -664,14 +664,17 @@
     for (var k = 0; k < ex.parts.length; k++) if (ex.parts[k].ids.indexOf(id) >= 0) return k;
     return -1;
   }
-  function examHTML() {
-    var s = session, ex = s.exam, id = s.queue[s.idx], q = QMAP[id], ans = s.answer;
+  // rid 有值 = 交卷后回看某一题：照答题时的样子显示题目 + 自己选的答案 + 解析，按钮回成绩页
+  function examHTML(rid) {
+    var s = session, ex = s.exam, review = rid != null;
+    var id = review ? rid : s.queue[s.idx], q = QMAP[id], ans = review ? s.picks[id] : s.answer;
+    var no = review ? s.queue.indexOf(id) : s.idx;
     var k = examPartOf(ex, id), part = ex.parts[k], first = part && part.ids[0] === id;
-    var h = (first ? '<div class="exam-part">第 ' + (k + 1) + ' 部分 · ' + esc(part.name) + '</div>' : '') +
+    var h = ((first || review) && part ? '<div class="exam-part">第 ' + (k + 1) + ' 部分 · ' + esc(part.name) + '</div>' : '') +
       '<div class="card"><div class="qtop"><span class="lv ' + esc(q.level) + '">' + esc(q.level) + '</span>' +
       '<span class="sec">' + esc(q.section) + '</span>' +
       '<span class="exam-timer" id="exTimer">⏱ ' + fmtDur(examElapsed()) + '</span>' +
-      '<span class="progress">第 ' + (s.idx + 1) + ' 题 / 共 ' + s.queue.length + ' 题</span></div>' +
+      '<span class="progress">第 ' + (no + 1) + ' 题 / 共 ' + s.queue.length + ' 题</span></div>' +
       (isListen(q) ? listenHTML(q) : isPassage(q) ? passageHTML(q, ans)
         : '<p class="instr">' + sentenceHTML(tText(q, 'instruction')) + '</p>' +
           '<div class="sentence">' + sentenceHTML(tText(q, 'sentence')) + '</div>' + imageHTML(q)) +
@@ -686,7 +689,9 @@
       var ok = ans === q.answer;
       h += '<div class="verdict ' + (ok ? 'ok' : 'bad') + ' exam-verdict"><span class="dot"></span>' +
         (ok ? '正确' : '错误 · 正确答案是 ' + (q.answer + 1) + ' ' + sentenceHTML(q.options[q.answer])) + '</div>' +
-        '<div class="next"><button class="btn" data-act="exam-next">' + (s.idx + 1 < s.queue.length ? '下一题' : '交卷') + '</button></div>';
+        (review ? '<div class="expl">' + explHTML(q.explanation) + '</div>' +
+          '<div class="next"><button class="btn" data-act="exam-back">返回成绩</button></div>'
+        : '<div class="next"><button class="btn" data-act="exam-next">' + (s.idx + 1 < s.queue.length ? '下一题' : '交卷') + '</button></div>');
     }
     return h + '</div>';
   }
@@ -716,11 +721,10 @@
     s.queue.forEach(function (id, n) {
       var q = QMAP[id], p = s.picks[id], ok = p === q.answer, k = examPartOf(ex, id);
       if (ok) { score++; partScore[k]++; }
-      rows += '<div class="item"><span class="exam-no ' + (ok ? 'ok' : 'bad') + '">' + (ok ? '✓' : '✗') + ' ' + (n + 1) + '</span>' +
+      rows += '<div class="item" id="exrow-' + n + '"><span class="exam-no' + (ok ? 'ok' : 'bad') + '">' + (ok ? '✓' : '✗') + ' ' + (n + 1) + '</span>' +
         '<div class="main"><div class="s">' + esc(q.section) + '</div>' +
         '<div class="m">你的答案 ' + (p + 1) + (ok ? '' : ' · 正确答案 ' + (q.answer + 1)) + '</div></div>' +
-        '<button class="btn ghost small" data-act="exam-view" data-id="' + esc(id) + '">' + (s.open[id] ? '收起' : '看解析') + '</button></div>' +
-        (s.open[id] ? '<div class="expl exam-expl">' + explHTML(q.explanation) + '</div>' : '');
+        '<button class="btn ghost small" data-act="exam-view" data-id="' + esc(id) + '">看解析</button></div>';
     });
     return '<div class="card hero"><h2>' + score + ' / ' + total + '</h2><p>' + esc(ex.title) + ' · 用时 ' + fmtDur(examElapsed()) + '</p>' +
       '<p>' + ex.parts.map(function (p, k) { return esc(p.name) + ' ' + partScore[k] + ' / ' + p.ids.length; }).join('　') + '</p>' +
@@ -750,7 +754,7 @@
 
   function quizHTML() {
     var s = session;
-    if (s.mode === 'exam') return s.idx >= s.queue.length ? examResultHTML() : examHTML();
+    if (s.mode === 'exam') return s.idx < s.queue.length ? examHTML() : s.review && QMAP[s.review] ? examHTML(s.review) : examResultHTML();
     if (s.idx >= s.queue.length) return summaryHTML();
     var q = QMAP[s.queue[s.idx]], r = rec(q.id), ans = s.answer;
     var tag = r.status === 'learning' ? '<span class="tag bad">错题 ' + r.streak + '/' + SRS.MAX_STREAK + '</span>'
@@ -877,7 +881,13 @@
     else if (act === 'start-exam') startExam(EXAMS.filter(function (x) { return x.id === t.dataset.id; })[0]);
     else if (act === 'pick' && session && session.mode === 'exam') examPick(Number(t.dataset.i));
     else if (act === 'exam-next' && session && session.mode === 'exam' && session.answer != null) examNext();
-    else if (act === 'exam-view' && session && session.mode === 'exam') { session.open[t.dataset.id] = !session.open[t.dataset.id]; render(); }
+    else if (act === 'exam-view' && session && session.mode === 'exam') { stopAudio(); session.review = t.dataset.id; render(); window.scrollTo(0, 0); }
+    else if (act === 'exam-back' && session && session.mode === 'exam') {
+      var backNo = session.queue.indexOf(session.review);
+      stopAudio(); session.review = null; render();
+      var row = document.getElementById('exrow-' + backNo);
+      if (row) row.scrollIntoView({ block: 'center' }); else window.scrollTo(0, 0);
+    }
     else if (act === 'pick' && session && session.answer == null) {
       var q = QMAP[session.queue[session.idx]], i = Number(t.dataset.i), ok = i === q.answer;
       // 今日练习里，只有"到期"的错题和新题按 daily 计；其他按手动复习计
