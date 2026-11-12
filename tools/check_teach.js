@@ -18,6 +18,8 @@ for (const id of Object.keys(T)) {
   const t = T[id];
   const pairs = [];
   if (t.instruction != null) pairs.push(['instruction', t.instruction, q.instruction]);
+  if (t.section != null) pairs.push(['section', t.section, q.section]);
+  if (t.brief != null) pairs.push(['brief', t.brief, q.brief]);
   if (t.sentence != null) pairs.push(['sentence', t.sentence, q.sentence]);
   if (t.options != null) {
     if (t.options.length !== q.options.length) { console.log('[FAIL]', id, 'options length'); fail++; }
@@ -28,8 +30,10 @@ for (const id of Object.keys(T)) {
     if (!Array.isArray(t.expl)) { console.log('[FAIL]', id, 'expl must be an array'); fail++; }
     else t.expl.forEach((s, i) => {
       if (!q.explanation.includes(strip(s))) { console.log('[FAIL]', id, 'expl' + (i + 1), 'matches no explanation line:', strip(s)); fail++; }
-      const k = s.replace(/\{([^|{}]+)\|([^|{}]+)\}/g, '').match(/[一-鿿々]/g);
-      if (k) { console.log('[FAIL]', id, 'expl' + (i + 1), 'kanji without reading:', k.join('')); fail++; }
+      // 解析行是中日混排：中文汉字本来就不注。只查「紧挨着假名 / 注音词」的汉字 —— 那是日语里漏注的
+      const bare = s.replace(/\{([^|{}]+)\|([^|{}]+)\}/g, 'Ｒ').replace(/\*/g, '');
+      const k = bare.match(/[ぁ-ゟ゠-ヿＲ][一-鿿々]+|[一-鿿々]+(?=[ぁ-ゟ゠-ヿＲ])/g);
+      if (k) { console.log('[FAIL]', id, 'expl' + (i + 1), 'kanji next to kana without reading:', k.join(' ')); fail++; }
     });
   }
   for (const [name, tv, qv] of pairs) {
@@ -40,7 +44,9 @@ for (const id of Object.keys(T)) {
 // coverage: every field shown in teaching mode
 for (const q of Q) {
   const t = T[q.id] || {};
-  const fields = [['instruction', t.instruction || q.instruction], ['sentence', t.sentence || q.sentence]];
+  const fields = [['instruction', t.instruction || q.instruction], ['sentence', t.sentence || q.sentence],
+    ['section', t.section || q.section]];
+  if (typeof q.brief === 'string') fields.push(['brief', t.brief || q.brief]);
   q.options.forEach((o, i) => fields.push(['option' + (i + 1), (t.options && t.options[i]) || o]));
   for (const [name, s] of fields) {
     const outside = s.replace(/\{([^|{}]+)\|([^|{}]+)\}/g, '');

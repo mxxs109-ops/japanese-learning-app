@@ -78,6 +78,8 @@
   .btn:active { transform: scale(.98); }
   .btn.ghost { background: transparent; color: var(--ink); border: 1px solid var(--line); }
   .btn.small { padding: 7px 14px; font-size: 13px; }
+  .rep-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .rep-btn { font-weight: 400; }
   .btn[disabled] { opacity: .35; cursor: default; }
   .rule { color: var(--muted); font-size: 13px; line-height: 1.8; }
   .rule b { color: var(--ink); font-weight: 600; }
@@ -297,7 +299,7 @@
   var STORE_KEY = 'jp-daily-v1';
   var REMOTE_KEY = 'jp-daily-remote-v1';
   // 改了 index.html / srs.js / install.bat 就把这个数 +1，并把 version.txt 改成同一个数
-  var APP_VERSION = 20;
+  var APP_VERSION = 21;
   var GH_API = 'https://api.github.com/repos/mxxs109-ops/japanese-learning-app/contents/';
   var INSTALL_CMD = 'curl -sL -o "%TEMP%\\jla.bat" https://raw.githubusercontent.com/mxxs109-ops/japanese-learning-app/main/install.bat && "%TEMP%\\jla.bat"';
 
@@ -433,7 +435,7 @@
   //   本地 audio/ 没有（旧安装）就从 GitHub 读；一声都没放出来就失败的，不算听过，可以再点
   function isListen(q) { return q.layout === 'listening' && typeof q.audio === 'string' && /^audio\/[\w.\-]+$/.test(q.audio); }
   var AUD = null, AUDQ = null;
-  function stopAudio() { if (AUD) { try { AUD.pause(); } catch (e) {} } AUD = null; AUDQ = null; }
+  function stopAudio() { if (AUD) { try { AUD.pause(); } catch (e) {} } AUD = null; AUDQ = null; stopReplay(); }
   function audState(q) { return (session && session.played && session.played[q.id]) || ''; }
   function fmtSec(t) { t = Math.max(0, Math.floor(t || 0)); return Math.floor(t / 60) + ':' + ('0' + t % 60).slice(-2); }
   function audioBlockHTML(q) {
@@ -487,7 +489,7 @@
       imageHTML(q).replace('class="qimg"', 'class="qimg big"') + audioBlockHTML(q);
   }
   function listSentence(q) {
-    return ((isPassage(q) || isListen(q)) && typeof q.brief === 'string') ? blankHTML(q.brief, null) : sentenceHTML(tText(q, 'sentence'));
+    return ((isPassage(q) || isListen(q)) && typeof q.brief === 'string') ? blankHTML(tText(q, 'brief'), null) : sentenceHTML(tText(q, 'sentence'));
   }
   // 教学模式：有注音版就用注音版，没有就用原文
   function teachOn() { return !!state.teach; }
@@ -521,13 +523,47 @@
       return '<ruby' + (/^[\x20-\x7e]+$/.test(rt) ? ' class="src"' : '') + '>' + base + '<rt>' + rt + '</rt></ruby>';
     });
   }
-  function explHTML(lines) {
+  // 题目分类名 / 试卷分区名：注音开着且有注音版就用注音版
+  function secHTML(q) { return rubyHTML(esc(tText(q, 'section'))); }
+  function partHTML(p) { return rubyHTML(esc(teachOn() && typeof p.teach === 'string' ? p.teach : p.name)); }
+  // 听力题：解析里「听力原文」标题旁边放「再听一遍」—— 做题时只能听一次，第二遍在这里听，不限次数
+  function explHTML(lines, q) {
     var out = '', inList = false;
     lines.forEach(function (l) {
       if (l.indexOf('- ') === 0) { if (!inList) { out += '<ul>'; inList = true; } out += '<li>' + rubyHTML(inline(l.slice(2))) + '</li>'; }
-      else { if (inList) { out += '</ul>'; inList = false; } out += '<p>' + rubyHTML(inline(l)) + '</p>'; }
+      else {
+        if (inList) { out += '</ul>'; inList = false; }
+        if (q && isListen(q) && l === '**听力原文**') out += '<p class="rep-head">' + rubyHTML(inline(l)) + replayHTML(q) + '</p>';
+        else out += '<p>' + rubyHTML(inline(l)) + '</p>';
+      }
     });
     return out + (inList ? '</ul>' : '');
+  }
+  var RAUD = null, RAUDQ = null;
+  function replayHTML(q) {
+    var on = RAUD && RAUDQ === q.id;
+    return '<button class="btn ghost small rep-btn" id="repBtn" data-act="replay" data-id="' + esc(q.id) + '">' +
+      (on ? '■ 停止' : '▶ もう一度聞く') + '</button>';
+  }
+  function stopReplay() { if (RAUD) { try { RAUD.pause(); } catch (e) {} } RAUD = null; RAUDQ = null; }
+  function toggleReplay(q) {
+    if (!q || !isListen(q)) return;
+    var b = document.getElementById('repBtn');
+    if (RAUD && RAUDQ === q.id) { stopReplay(); if (b) b.textContent = '▶ もう一度聞く'; return; }
+    if (AUD && session && session.played && session.played[AUDQ] === 'playing') session.played[AUDQ] = 'done';
+    stopAudio();
+    var a = new Audio(), remoteTried = false;
+    var remote = 'https://raw.githubusercontent.com/mxxs109-ops/japanese-learning-app/main/' + q.audio;
+    RAUD = a; RAUDQ = q.id;
+    function done() { if (RAUD !== a) return; stopReplay(); var x = document.getElementById('repBtn'); if (x) x.textContent = '▶ もう一度聞く'; }
+    a.addEventListener('ended', done);
+    a.addEventListener('error', function () {
+      if (RAUD !== a) return;
+      if (!remoteTried) { remoteTried = true; a.src = remote; a.play().catch(done); } else done();
+    });
+    a.src = q.audio;
+    a.play().catch(function () { if (!remoteTried && RAUD === a) { remoteTried = true; a.src = remote; a.play().catch(done); } });
+    if (b) b.textContent = '■ 停止';
   }
   function fmtDate(s) {
     if (!s) return '';
@@ -672,7 +708,7 @@
           '<button class="btn ghost" data-act="start-exam" data-id="' + esc(ex.id) + '">重做</button>'
         : '<button class="btn" data-act="start-exam" data-id="' + esc(ex.id) + '">' + (last ? '重做' : '开始') + '</button>') +
         '</span></div>' +
-        '<p class="exam-sub">' + n + ' 题 · ' + ex.parts.map(function (p) { return esc(p.name) + ' ' + p.ids.length; }).join(' / ') +
+        '<p class="exam-sub">' + n + ' 题 · ' + ex.parts.map(function (p) { return partHTML(p) + ' ' + p.ids.length; }).join(' / ') +
         ' · 按原题顺序 · 每题答完马上看对错，不能改 · 计时不限时</p>' +
         (last ? '<p class="exam-sub">上次：' + fmtDate(last.date) + ' · ' + last.score + ' / ' + last.total +
           (last.ms ? ' · 用时 ' + fmtDur(last.ms) : '') + '</p>' : '') + '</div>';
@@ -704,9 +740,9 @@
     var id = review ? rid : s.queue[s.idx], q = QMAP[id], ans = review ? s.picks[id] : s.answer;
     var no = review ? s.queue.indexOf(id) : s.idx;
     var k = examPartOf(ex, id), part = ex.parts[k], first = part && part.ids[0] === id;
-    var h = ((first || review) && part ? '<div class="exam-part">第 ' + (k + 1) + ' 部分 · ' + esc(part.name) + '</div>' : '') +
+    var h = ((first || review) && part ? '<div class="exam-part">第 ' + (k + 1) + ' 部分 · ' + partHTML(part) + '</div>' : '') +
       '<div class="card"><div class="qtop"><span class="lv ' + esc(q.level) + '">' + esc(q.level) + '</span>' +
-      '<span class="sec">' + esc(q.section) + '</span>' +
+      '<span class="sec">' + secHTML(q) + '</span>' +
       '<span class="exam-timer" id="exTimer">⏱ ' + fmtDur(examElapsed()) + '</span>' +
       '<span class="progress">第 ' + (no + 1) + ' 题 / 共 ' + s.queue.length + ' 题</span></div>' +
       (isListen(q) ? listenHTML(q) : isPassage(q) ? passageHTML(q, ans)
@@ -723,7 +759,7 @@
       var ok = ans === q.answer;
       h += '<div class="verdict ' + (ok ? 'ok' : 'bad') + ' exam-verdict"><span class="dot"></span>' +
         (ok ? '正确' : '错误 · 正确答案是 ' + (q.answer + 1) + ' ' + sentenceHTML(q.options[q.answer])) + '</div>' +
-        (review ? '<div class="expl">' + explHTML(tExpl(q)) + '</div>' +
+        (review ? '<div class="expl">' + explHTML(tExpl(q), q) + '</div>' +
           '<div class="next"><button class="btn" data-act="exam-back">返回成绩</button></div>'
         : '<div class="next"><button class="btn" data-act="exam-next">' + (s.idx + 1 < s.queue.length ? '下一题' : '交卷') + '</button></div>');
     }
@@ -756,12 +792,12 @@
       var q = QMAP[id], p = s.picks[id], ok = p === q.answer, k = examPartOf(ex, id);
       if (ok) { score++; partScore[k]++; }
       rows += '<div class="item" id="exrow-' + n + '"><span class="exam-no' + (ok ? 'ok' : 'bad') + '">' + (ok ? '✓' : '✗') + ' ' + (n + 1) + '</span>' +
-        '<div class="main"><div class="s">' + esc(q.section) + '</div>' +
+        '<div class="main"><div class="s">' + secHTML(q) + '</div>' +
         '<div class="m">你的答案 ' + (p + 1) + (ok ? '' : ' · 正确答案 ' + (q.answer + 1)) + '</div></div>' +
         '<button class="btn ghost small" data-act="exam-view" data-id="' + esc(id) + '">看解析</button></div>';
     });
     return '<div class="card hero"><h2>' + score + ' / ' + total + '</h2><p>' + esc(ex.title) + ' · 用时 ' + fmtDur(examElapsed()) + '</p>' +
-      '<p>' + ex.parts.map(function (p, k) { return esc(p.name) + ' ' + partScore[k] + ' / ' + p.ids.length; }).join('　') + '</p>' +
+      '<p>' + ex.parts.map(function (p, k) { return partHTML(p) + ' ' + partScore[k] + ' / ' + p.ids.length; }).join('　') + '</p>' +
       '<button class="btn" data-act="end">返回</button></div>' +
       '<div class="card"><div class="head"><h3>每道题</h3></div>' + rows + '</div>';
   }
@@ -798,7 +834,7 @@
     // 小1 答完后：原来的题干/插图换成原题样式的两栏（左 問題 / 右 正解），选项按钮留在最下面
     var orig = ans != null ? revealHTML(q, ans === q.answer) : '';
     var h = '<div class="card"><div class="qtop"><span class="lv ' + esc(q.level) + '">' + esc(q.level) + '</span>' +
-      '<span class="sec">' + esc(q.section) + '</span>' + tag +
+      '<span class="sec">' + secHTML(q) + '</span>' + tag +
       '<span class="progress">' + (s.idx + 1) + ' / ' + s.queue.length + '</span></div>' +
       (orig || (isListen(q) ? listenHTML(q) : isPassage(q)
         ? passageHTML(q, ans)
@@ -817,7 +853,7 @@
       h += '<div class="card"><div class="verdict ' + (ok ? 'ok' : 'bad') + '"><span class="dot"></span>' +
         (ok ? '正确' : '错误 · 正确答案是 ' + (q.answer + 1) + ' ' + sentenceHTML(q.options[q.answer])) + '</div>' +
         '<div class="sched">' + schedText(s.after) + '</div>' +
-        '<div class="expl">' + explHTML(tExpl(q)) + '</div>' +
+        '<div class="expl">' + explHTML(tExpl(q), q) + '</div>' +
         '<div class="next"><button class="btn" data-act="next">' + (s.idx + 1 < s.queue.length ? '下一题' : '完成') + '</button></div></div>';
     }
     return h;
@@ -877,7 +913,7 @@
       if (locked) st = q.date >= '2099' ? '解锁日期待定' : whenText(q.date) + '解锁';   // 2099-12-31 = 先锁着、哪天放还没定
       else st = { 'new': '未做', learning: '错题 ' + r.streak + '/' + SRS.MAX_STREAK, mastered: '已掌握', graduated: '已毕业' }[r.status];
       h += '<div class="item"' + (locked ? ' style="opacity:.5"' : '') + '><span class="lv ' + esc(q.level) + '">' + esc(q.level) + '</span>' +
-        '<div class="main"><div class="s">' + (locked ? '🔒 ' + esc(q.section) : listSentence(q)) + '</div>' +
+        '<div class="main"><div class="s">' + (locked ? '🔒 ' + secHTML(q) : listSentence(q)) + '</div>' +
         '<div class="m">' + (q.date >= '2099' ? '' : fmtDate(q.date) + ' · ') + st + '</div></div>' +
         (locked ? '' : '<button class="btn ghost small" data-act="free-one" data-id="' + esc(q.id) + '">练</button>') + '</div>';
     });
@@ -937,6 +973,7 @@
     else if (act === 'next') { stopAudio(); session.idx++; session.answer = null; session.after = null; render(); window.scrollTo(0, 0); }
     else if (act === 'end') { stopAudio(); session = null; view = 'home'; render(); }
     else if (act === 'check-update') checkUpdate(true);
+    else if (act === 'replay') toggleReplay(QMAP[t.dataset.id]);
     else if (act === 'teach') { state.teach = !state.teach; save(); render(); }
     else if (act === 'copy-cmd') copyCmd();
   });
