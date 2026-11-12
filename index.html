@@ -107,6 +107,13 @@
   .instr { font-size: 13px; color: var(--muted); line-height: 1.9; margin: 0 0 28px; }
   .sentence { font-size: 26px; text-align: center; margin: 8px 0 34px; line-height: 1.7; word-break: keep-all; overflow-wrap: anywhere; }
   .sentence u { text-decoration: none; border-bottom: 2px solid var(--ink); padding: 0 2px; }
+  /* 文章题（layout: 'passage'）：整篇文章全部展开，不做滚动框；□ = 红框空格 */
+  .passage { font-size: 17px; line-height: 2.4; text-align: left; white-space: pre-wrap; margin: 0 0 30px;
+    padding: 14px 20px; border: 1px solid #ddd8ce; border-radius: 12px; background: #fff; overflow-wrap: anywhere; }
+  .passage rt { font-size: 0.55em; }
+  .pblank { display: inline-block; min-width: 4.5em; height: 1.5em; line-height: 1.4em; padding: 0 6px; vertical-align: middle;
+    border: 2px solid #e05252; border-radius: 3px; text-align: center; white-space: nowrap; }
+  .pblank.fill { border-color: #1f9d6b; color: #1f9d6b; font-weight: 600; }
   .qimg { text-align: center; margin: -14px 0 26px; }
   .qimg img { max-width: 100%; max-height: 240px; border-radius: 10px; background: #fff; }
   rt { font-size: 0.45em; }
@@ -235,6 +242,7 @@
     .stats { grid-template-columns: repeat(2, 1fr); }
     .opts { grid-template-columns: 1fr; }
     .sentence { font-size: 22px; }
+    .passage { font-size: 16px; padding: 12px 14px; }
     .card { padding: 20px 18px; }
   }
 </style>
@@ -267,7 +275,7 @@
   var STORE_KEY = 'jp-daily-v1';
   var REMOTE_KEY = 'jp-daily-remote-v1';
   // 改了 index.html / srs.js / install.bat 就把这个数 +1，并把 version.txt 改成同一个数
-  var APP_VERSION = 12;
+  var APP_VERSION = 13;
   var GH_API = 'https://api.github.com/repos/mxxs109-ops/japanese-learning-app/contents/';
   var INSTALL_CMD = 'curl -sL -o "%TEMP%\\jla.bat" https://raw.githubusercontent.com/mxxs109-ops/japanese-learning-app/main/install.bat && "%TEMP%\\jla.bat"';
 
@@ -366,6 +374,16 @@
       // 注音是英文 = 外来语的来源词，换一种样式
       return '<ruby' + (/^[\x20-\x7e]+$/.test(rt) ? ' class="src"' : '') + '>' + base + '<rt>' + rt + '</rt></ruby>';
     }).replace(/\[(.+?)\]/g, '<u>$1</u>');
+  }
+  // 文章题：sentence 放整篇文章（\n 换行），brief 放列表里显示的那一句（含 □）
+  //   老版本不认 layout，会把整篇文章当普通句子显示 —— 内容不丢，只是排版不同
+  function isPassage(q) { return q.layout === 'passage'; }
+  function blankHTML(s, fill) {
+    return sentenceHTML(s).replace(/□/g, fill == null ? '<span class="pblank"></span>'
+      : '<span class="pblank fill">' + sentenceHTML(fill) + '</span>');
+  }
+  function listSentence(q) {
+    return (isPassage(q) && typeof q.brief === 'string') ? blankHTML(q.brief, null) : sentenceHTML(tText(q, 'sentence'));
   }
   // 教学模式：有注音版就用注音版，没有就用原文
   function teachOn() { return !!state.teach; }
@@ -534,8 +552,11 @@
     var h = '<div class="card"><div class="qtop"><span class="lv ' + esc(q.level) + '">' + esc(q.level) + '</span>' +
       '<span class="sec">' + esc(q.section) + '</span>' + tag +
       '<span class="progress">' + (s.idx + 1) + ' / ' + s.queue.length + '</span></div>' +
-      (orig || ('<p class="instr">' + sentenceHTML(tText(q, 'instruction')) + '</p>' +
-      '<div class="sentence">' + sentenceHTML(tText(q, 'sentence')) + '</div>' + imageHTML(q))) +
+      (orig || (isPassage(q)
+        ? '<p class="instr">' + blankHTML(tText(q, 'instruction'), null) + '</p>' +
+          '<div class="passage">' + blankHTML(tText(q, 'sentence'), ans != null ? q.options[q.answer] : null) + '</div>' + imageHTML(q)
+        : '<p class="instr">' + sentenceHTML(tText(q, 'instruction')) + '</p>' +
+          '<div class="sentence">' + sentenceHTML(tText(q, 'sentence')) + '</div>' + imageHTML(q))) +
       '<div class="opts' + (q.options.some(function (o) { return String(o).length > 10; }) ? ' long' : '') + '">';
     q.options.forEach(function (o, i) {
       var cls = '';
@@ -578,7 +599,7 @@
     list.forEach(function (q) {
       var r = rec(q.id);
       h += '<div class="item"><span class="lv ' + esc(q.level) + '">' + esc(q.level) + '</span><div class="main">' +
-        '<div class="s">' + sentenceHTML(tText(q, 'sentence')) + '</div>' +
+        '<div class="s">' + listSentence(q) + '</div>' +
         '<div class="m">' + dots(r.streak) + r.streak + '/' + SRS.MAX_STREAK + ' · 答案 ' + esc(q.options[q.answer]) +
         ' · 错过 ' + r.wrongCount + ' 次 · 下次 ' + whenText(r.due) + '</div></div>' +
         '<button class="btn ghost small" data-act="free-one" data-id="' + esc(q.id) + '">练</button></div>';
@@ -609,7 +630,7 @@
       if (locked) st = q.date >= '2099' ? '解锁日期待定' : whenText(q.date) + '解锁';   // 2099-12-31 = 先锁着、哪天放还没定
       else st = { 'new': '未做', learning: '错题 ' + r.streak + '/' + SRS.MAX_STREAK, mastered: '已掌握', graduated: '已毕业' }[r.status];
       h += '<div class="item"' + (locked ? ' style="opacity:.5"' : '') + '><span class="lv ' + esc(q.level) + '">' + esc(q.level) + '</span>' +
-        '<div class="main"><div class="s">' + (locked ? '🔒 ' + esc(q.section) : sentenceHTML(tText(q, 'sentence'))) + '</div>' +
+        '<div class="main"><div class="s">' + (locked ? '🔒 ' + esc(q.section) : listSentence(q)) + '</div>' +
         '<div class="m">' + (q.date >= '2099' ? '' : fmtDate(q.date) + ' · ') + st + '</div></div>' +
         (locked ? '' : '<button class="btn ghost small" data-act="free-one" data-id="' + esc(q.id) + '">练</button>') + '</div>';
     });
