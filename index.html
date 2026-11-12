@@ -299,7 +299,7 @@
   var STORE_KEY = 'jp-daily-v1';
   var REMOTE_KEY = 'jp-daily-remote-v1';
   // 改了 index.html / srs.js / install.bat 就把这个数 +1，并把 version.txt 改成同一个数
-  var APP_VERSION = 21;
+  var APP_VERSION = 22;
   var GH_API = 'https://api.github.com/repos/mxxs109-ops/japanese-learning-app/contents/';
   var INSTALL_CMD = 'curl -sL -o "%TEMP%\\jla.bat" https://raw.githubusercontent.com/mxxs109-ops/japanese-learning-app/main/install.bat && "%TEMP%\\jla.bat"';
 
@@ -716,9 +716,17 @@
     return h;
   }
   // 交卷时存下每题选的答案（picks）→ 之后不用重做就能看成绩和全部解析。老记录没有 picks = 只能重做
+  //   例外：老记录是满分（score = total = 题数）→ 每题选的一定是正确答案，照答案补出 picks 存回去
   function examSaved(ex) {
-    var last = state.exams && state.exams[ex.id], p = last && last.picks;
-    return !!(p && typeof p === 'object' && examIds(ex).every(function (id) { return typeof p[id] === 'number'; }));
+    var last = state.exams && state.exams[ex.id];
+    if (!last) return false;
+    var ids = examIds(ex), p = last.picks;
+    if (!p && last.score === last.total && last.total === ids.length && ids.every(function (id) { return QMAP[id]; })) {
+      p = {};
+      ids.forEach(function (id) { p[id] = QMAP[id].answer; });
+      last.picks = p; save();
+    }
+    return !!(p && typeof p === 'object' && ids.every(function (id) { return typeof p[id] === 'number'; }));
   }
   function viewExam(ex) {
     if (!ex || !examReady(ex) || !examSaved(ex)) return;
@@ -791,7 +799,7 @@
     s.queue.forEach(function (id, n) {
       var q = QMAP[id], p = s.picks[id], ok = p === q.answer, k = examPartOf(ex, id);
       if (ok) { score++; partScore[k]++; }
-      rows += '<div class="item" id="exrow-' + n + '"><span class="exam-no' + (ok ? 'ok' : 'bad') + '">' + (ok ? '✓' : '✗') + ' ' + (n + 1) + '</span>' +
+      rows += '<div class="item" id="exrow-' + n + '"><span class="exam-no ' + (ok ? 'ok' : 'bad') + '">' + (ok ? '✓' : '✗') + ' ' + (n + 1) + '</span>' +
         '<div class="main"><div class="s">' + secHTML(q) + '</div>' +
         '<div class="m">你的答案 ' + (p + 1) + (ok ? '' : ' · 正确答案 ' + (q.answer + 1)) + '</div></div>' +
         '<button class="btn ghost small" data-act="exam-view" data-id="' + esc(id) + '">看解析</button></div>';
