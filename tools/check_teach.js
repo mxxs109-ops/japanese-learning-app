@@ -23,6 +23,15 @@ for (const id of Object.keys(T)) {
     if (t.options.length !== q.options.length) { console.log('[FAIL]', id, 'options length'); fail++; }
     t.options.forEach((o, i) => pairs.push(['option' + (i + 1), o, q.options[i]]));
   }
+  // expl：解析里某几行的注音版（听力原文）。每行去掉注音后必须正好是解析里的一行，且不许有没注音的汉字
+  if (t.expl != null) {
+    if (!Array.isArray(t.expl)) { console.log('[FAIL]', id, 'expl must be an array'); fail++; }
+    else t.expl.forEach((s, i) => {
+      if (!q.explanation.includes(strip(s))) { console.log('[FAIL]', id, 'expl' + (i + 1), 'matches no explanation line:', strip(s)); fail++; }
+      const k = s.replace(/\{([^|{}]+)\|([^|{}]+)\}/g, '').match(/[一-鿿々]/g);
+      if (k) { console.log('[FAIL]', id, 'expl' + (i + 1), 'kanji without reading:', k.join('')); fail++; }
+    });
+  }
   for (const [name, tv, qv] of pairs) {
     if (strip(tv) !== strip(qv)) { console.log('[FAIL]', id, name, 'text differs:\n   teach:', strip(tv), '\n   orig :', strip(qv)); fail++; }
   }

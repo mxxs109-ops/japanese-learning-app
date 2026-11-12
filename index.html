@@ -257,6 +257,7 @@
   .empty { text-align: center; color: var(--muted); padding: 28px 0; font-size: 14px; }
   .head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
   .head h3 { margin: 0; font-size: 16px; }
+  .exam-btns { display: flex; gap: 8px; flex-shrink: 0; margin-left: 12px; }
   .test { background: #fff4d6; color: #7a5a00; font-size: 12px; padding: 8px 12px; border-radius: 10px; margin-bottom: 14px; }
 
   @media (max-width: 480px) {
@@ -296,7 +297,7 @@
   var STORE_KEY = 'jp-daily-v1';
   var REMOTE_KEY = 'jp-daily-remote-v1';
   // 改了 index.html / srs.js / install.bat 就把这个数 +1，并把 version.txt 改成同一个数
-  var APP_VERSION = 19;
+  var APP_VERSION = 20;
   var GH_API = 'https://api.github.com/repos/mxxs109-ops/japanese-learning-app/contents/';
   var INSTALL_CMD = 'curl -sL -o "%TEMP%\\jla.bat" https://raw.githubusercontent.com/mxxs109-ops/japanese-learning-app/main/install.bat && "%TEMP%\\jla.bat"';
 
@@ -505,11 +506,26 @@
       .replace(/〔([^〔〕]+)〕/g, '<span class="xbox">$1</span>')
       .replace(/□/g, '<span class="xblank"></span>');
   }
+  // 教学模式：TEACH[id].expl = 解析里某几行的注音版（多半是听力原文）。按「去掉注音后和原行逐字一样」对上原行，
+  //   对不上的行照原文显示；注音关着 / 没写 expl = 和以前一样
+  function stripRuby(s) { return String(s).replace(/\{([^|{}]+)\|([^|{}]+)\}/g, '$1'); }
+  function tExpl(q) {
+    var t = teachOn() && TEACH[q.id];
+    if (!t || !Array.isArray(t.expl)) return q.explanation;
+    var map = {};
+    t.expl.forEach(function (s) { if (typeof s === 'string') map[stripRuby(s)] = s; });
+    return q.explanation.map(function (l) { return Object.prototype.hasOwnProperty.call(map, l) ? map[l] : l; });
+  }
+  function rubyHTML(h) {
+    return h.replace(/\{([^|{}]+)\|([^|{}]+)\}/g, function (m, base, rt) {
+      return '<ruby' + (/^[\x20-\x7e]+$/.test(rt) ? ' class="src"' : '') + '>' + base + '<rt>' + rt + '</rt></ruby>';
+    });
+  }
   function explHTML(lines) {
     var out = '', inList = false;
     lines.forEach(function (l) {
-      if (l.indexOf('- ') === 0) { if (!inList) { out += '<ul>'; inList = true; } out += '<li>' + inline(l.slice(2)) + '</li>'; }
-      else { if (inList) { out += '</ul>'; inList = false; } out += '<p>' + inline(l) + '</p>'; }
+      if (l.indexOf('- ') === 0) { if (!inList) { out += '<ul>'; inList = true; } out += '<li>' + rubyHTML(inline(l.slice(2))) + '</li>'; }
+      else { if (inList) { out += '</ul>'; inList = false; } out += '<p>' + rubyHTML(inline(l)) + '</p>'; }
     });
     return out + (inList ? '</ul>' : '');
   }
@@ -650,15 +666,33 @@
     var h = '';
     EXAMS.forEach(function (ex) {
       if (!examReady(ex)) return;
-      var n = examIds(ex).length, last = state.exams && state.exams[ex.id];
-      h += '<div class="card exam-card"><div class="head"><h3>' + esc(ex.title) + '</h3>' +
-        '<button class="btn" data-act="start-exam" data-id="' + esc(ex.id) + '">开始</button></div>' +
+      var n = examIds(ex).length, last = state.exams && state.exams[ex.id], seen = examSaved(ex);
+      h += '<div class="card exam-card"><div class="head"><h3>' + esc(ex.title) + '</h3><span class="exam-btns">' +
+        (seen ? '<button class="btn" data-act="view-exam" data-id="' + esc(ex.id) + '">查看试卷</button> ' +
+          '<button class="btn ghost" data-act="start-exam" data-id="' + esc(ex.id) + '">重做</button>'
+        : '<button class="btn" data-act="start-exam" data-id="' + esc(ex.id) + '">' + (last ? '重做' : '开始') + '</button>') +
+        '</span></div>' +
         '<p class="exam-sub">' + n + ' 题 · ' + ex.parts.map(function (p) { return esc(p.name) + ' ' + p.ids.length; }).join(' / ') +
         ' · 按原题顺序 · 每题答完马上看对错，不能改 · 计时不限时</p>' +
         (last ? '<p class="exam-sub">上次：' + fmtDate(last.date) + ' · ' + last.score + ' / ' + last.total +
           (last.ms ? ' · 用时 ' + fmtDur(last.ms) : '') + '</p>' : '') + '</div>';
     });
     return h;
+  }
+  // 交卷时存下每题选的答案（picks）→ 之后不用重做就能看成绩和全部解析。老记录没有 picks = 只能重做
+  function examSaved(ex) {
+    var last = state.exams && state.exams[ex.id], p = last && last.picks;
+    return !!(p && typeof p === 'object' && examIds(ex).every(function (id) { return typeof p[id] === 'number'; }));
+  }
+  function viewExam(ex) {
+    if (!ex || !examReady(ex) || !examSaved(ex)) return;
+    stopAudio();
+    var last = state.exams[ex.id], ids = examIds(ex), picks = {};
+    ids.forEach(function (id) { picks[id] = last.picks[id]; });
+    session = { queue: ids, idx: ids.length, mode: 'exam', exam: ex, answer: null, after: null,
+      results: ids.map(function (id) { return picks[id] === QMAP[id].answer; }), picks: picks, open: {},
+      start: 0, end: last.ms || 0, saved: last.date };
+    render(); window.scrollTo(0, 0);
   }
   function examPartOf(ex, id) {
     for (var k = 0; k < ex.parts.length; k++) if (ex.parts[k].ids.indexOf(id) >= 0) return k;
@@ -689,7 +723,7 @@
       var ok = ans === q.answer;
       h += '<div class="verdict ' + (ok ? 'ok' : 'bad') + ' exam-verdict"><span class="dot"></span>' +
         (ok ? '正确' : '错误 · 正确答案是 ' + (q.answer + 1) + ' ' + sentenceHTML(q.options[q.answer])) + '</div>' +
-        (review ? '<div class="expl">' + explHTML(q.explanation) + '</div>' +
+        (review ? '<div class="expl">' + explHTML(tExpl(q)) + '</div>' +
           '<div class="next"><button class="btn" data-act="exam-back">返回成绩</button></div>'
         : '<div class="next"><button class="btn" data-act="exam-next">' + (s.idx + 1 < s.queue.length ? '下一题' : '交卷') + '</button></div>');
     }
@@ -746,7 +780,8 @@
     if (s.idx >= s.queue.length) {
       s.end = Date.now();
       state.exams = state.exams || {};
-      state.exams[s.exam.id] = { date: TODAY, score: s.results.filter(Boolean).length, total: s.queue.length, ms: s.end - s.start };
+      state.exams[s.exam.id] = { date: TODAY, score: s.results.filter(Boolean).length, total: s.queue.length, ms: s.end - s.start,
+        picks: s.picks };
       save();
     }
     render(); window.scrollTo(0, 0);
@@ -782,7 +817,7 @@
       h += '<div class="card"><div class="verdict ' + (ok ? 'ok' : 'bad') + '"><span class="dot"></span>' +
         (ok ? '正确' : '错误 · 正确答案是 ' + (q.answer + 1) + ' ' + sentenceHTML(q.options[q.answer])) + '</div>' +
         '<div class="sched">' + schedText(s.after) + '</div>' +
-        '<div class="expl">' + explHTML(q.explanation) + '</div>' +
+        '<div class="expl">' + explHTML(tExpl(q)) + '</div>' +
         '<div class="next"><button class="btn" data-act="next">' + (s.idx + 1 < s.queue.length ? '下一题' : '完成') + '</button></div></div>';
     }
     return h;
@@ -878,7 +913,8 @@
       if (L.length === LEVELS.length) L = [];   // 全部选上 = 全部
       state.levels = L; save(); render();
     }
-    else if (act === 'start-exam') startExam(EXAMS.filter(function (x) { return x.id === t.dataset.id; })[0]);
+    else if (act === 'view-exam') viewExam(EXAMS.filter(function (x) { return x.id === t.dataset.id; })[0]);
+    else if (act === 'start-exam')startExam(EXAMS.filter(function (x) { return x.id === t.dataset.id; })[0]);
     else if (act === 'pick' && session && session.mode === 'exam') examPick(Number(t.dataset.i));
     else if (act === 'exam-next' && session && session.mode === 'exam' && session.answer != null) examNext();
     else if (act === 'exam-view' && session && session.mode === 'exam') { stopAudio(); session.review = t.dataset.id; render(); window.scrollTo(0, 0); }
