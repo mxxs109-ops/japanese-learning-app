@@ -383,7 +383,8 @@ window.PAST_RESULTS = [
   { id: 'n2-moji1-tane',      date: '2026-11-07', choice: 1 },  // 选 2 たね → 对
   { id: 'n1-moji1-idonde',    date: '2026-11-07', choice: 3 },  // 选 4 いどんで → 对
   { id: 'n1-moji3-yayakoshii', date: '2026-11-10', choice: 2 },  // 选 3 複雑だ → 对（11-10 辐射蓝说误点进了错题集，改回已掌握）
-  { id: 'sho1-hiragana1-tsuru', date: '2026-11-10', choice: 0 }  // 选 1 つ → 对（同上，误点）
+  { id: 'sho1-hiragana1-tsuru', date: '2026-11-10', choice: 0 },  // 选 1 つ → 对（同上，误点）
+  { id: 'n5-bunpou1-heyano',   date: '2026-11-12', choice: 1 }   // 11-12 辐射蓝要求加入错题集（实际选了哪个没说，记成错选 2 を）
 ];
 
 // 教学模式（右上角「注音」开关）用的注音版，按题目 id 写；没写的部分显示原文。
