@@ -105,6 +105,20 @@
     - 文章题答完后空格填上正确答案（和平时一样）
     - 计时：开始时记 start，题目顶部「⏱ 分:秒」每秒刷新，交卷停表；结果页和首页卡片显示用时（state.exams[id].ms）
     - 🔙 改之前的副本在 scratchpad（index.before_exam_v2.html），git 上一版 = e156e4b
+26. **手写笔记 Page002、Page003**（他抄完 B1〜B4：文法1/2/3 + 読解1）——照 HANDOFF「新抄一页」7 步：
+    - ⚠️ 他中途插进来发的照片不落盘；他单独重发一次后落在 `C:\Users\wangx\.claude\uploads\<会话>\*.jpg` → 备份成 PageNNN_原稿照片.jpg
+    - 排版：Page001 的头部（样式 + 切换脚本）原样复用，追加几个新记号（.blank 填空线、.qbox 方框、.ul 下划线、.wavyg 金棕波浪线、.arc 弧线、.ok ✓）；
+      拼页脚本在 scratchpad（build_pages.js）。他笔记里的 ★ 画成了 ♡，照抄 ♡
+    - 笔记（隐藏笔记时消失）：中文注释、×/✓、圈号、B2 的〈もんだいれい〉〈かいとうのしかた〉〈注意〉整段、♡ 正确语序和 1 4 2 3、「主语 地点で 动词」
+    - **say.js 改动（所有页共用）**：有 ruby 的汉字按注音念（以前是把汉字直接送引擎让它自己猜）；
+      `<ruby data-yomi="カタカナ">` = 只给朗读用的读法。B2「入（はい）る」被引擎当成助词「は」+「いる」念成 ワ・イル → data-yomi="ハイ" 修好
+      - 回归：Page001 重新跑生成 made=0 reused=144 = 念的文字一个字没变 ✅（Page001 的 ruby 只在笔记里）
+      - 🔙 改之前的 say.js 副本在 scratchpad（say.before_ruby.js）
+    - PDF 4 版 + flip 4 张 × 2 页；朗读 Page002 15 段 / Page003 18 段 × 6 音色，scaled=0；kana.txt 逐段核对
+      （他笔记里 今 的注音写成「にま」，页面上用正确的「いま」）
+    - pages.js 加 Page002、Page003；test_notes_book.py 6/6
+    - **第一次实测「全部朗读自动翻页」**（CDP，模拟每页读完的 done 消息）：封面 → 读第 1 页 → 同一对开第 2 页 → 自动翻到 3/4 → 读第 3 页 → 停 ✅
+    - 整个 notes/ 复制到桌面「日本語Daily_手写笔记」，705 个文件 md5 逐个一致
 
 ## 2026-11-10（周二）· Day4
 

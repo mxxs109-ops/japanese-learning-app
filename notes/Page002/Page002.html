@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>Page 002</title>
+<!--
+  手写笔记 Page 002 的电子版。
+    默认 = 白底 + 隐藏笔记（直接双击打开就是这个）
+    ?theme=photo  照片配色（纸色 + 金棕 / 红墨水）      ?theme=white  白底淡线（金棕 → 黑，红 → 正蓝）
+    &clean=0      显示笔记（正确答案的圈、×、对调括号、中文注释）；clean=1 隐藏笔记，题目照旧
+  屏幕上右上角有切换按钮；导出 PDF：tools/make_notes_pdf.py（4 个版本）
+  每行 = 本子上的一条横线；行数、换行照手写稿
+  标了 class="note" 的都是「笔记」，隐藏笔记时消失
+-->
+<style>
+  @page { size: A4; margin: 0; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+  .theme-photo { --paper: #eef0ea; --line: #9fb0bc; --meta: #7c8790; --gold: #9a7a30; --red: #a52a3a; }
+  .theme-white { --paper: #ffffff; --line: #dbe3ea; --meta: #9aa4ad; --gold: #111111; --red: #1640e6; }
+
+  .page {
+    width: 210mm; height: 297mm; position: relative; overflow: hidden;
+    background: var(--paper);
+    font-family: "Yu Gothic Medium", "Yu Gothic", "Meiryo", sans-serif; font-weight: 500;
+    color: var(--gold);
+  }
+  .zh { font-family: "Microsoft YaHei", "Yu Gothic", sans-serif; font-weight: 400; font-size: 0.92em; }
+  .row.zh { font-size: 3.8mm; }
+  .gold { color: var(--gold); } .red { color: var(--red); }
+
+  /* header */
+  .head { position: absolute; left: 0; right: 0; top: 0; height: 30mm; border-bottom: 0.3mm solid var(--line); }
+  .title { position: absolute; left: 18mm; bottom: 1.6mm; font-size: 6.2mm; color: var(--red); font-family: "Segoe UI", "Yu Gothic", sans-serif; }
+  .meta { position: absolute; right: 14mm; width: 55mm; font-family: "Segoe UI", sans-serif; font-size: 2.6mm; color: var(--meta); }
+  .meta.no { top: 8mm; border-bottom: 0.25mm dotted var(--meta); padding-bottom: 2.2mm; }
+  .meta.date { bottom: 2mm; }
+  .meta.date span { margin-left: 22mm; letter-spacing: 9mm; }
+
+  /* ruled rows */
+  .rows { position: absolute; left: 0; right: 0; top: 30mm; }
+  .row {
+    height: 9.4mm; border-bottom: 0.3mm solid var(--line);
+    padding: 0 14mm 1.3mm 18mm; display: flex; align-items: flex-end; white-space: nowrap;
+    font-size: 4.15mm; letter-spacing: 0.02em;
+  }
+  .in1 { padding-left: 24mm; }
+  .s { display: inline-block; width: 2.2mm; }      /* 词间空格 */
+  .opt { margin-right: 9mm; }
+  .num { margin-right: 0.8mm; }
+  .circ {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 5.6mm; height: 5.6mm; border: 0.35mm solid var(--gold); border-radius: 50%;
+    color: var(--gold); font-size: 3.4mm; margin-right: 1mm; font-family: "Segoe UI", sans-serif;
+  }
+  .circ .dot { display: none; }
+  .wavy { text-decoration: underline wavy var(--red); text-decoration-thickness: 0.3mm; text-underline-offset: 1.2mm; }
+  .under { position: relative; display: inline-block; }
+  .under::after { content: ""; position: absolute; left: 0; right: 0; bottom: -0.6mm; border-bottom: 0.3mm solid var(--gold); }
+  /* × under a character: drawn in the row below */
+  .x { position: relative; display: inline-block; }
+  .x::after { content: "×"; position: absolute; left: 50%; transform: translateX(-50%); top: 8.6mm; color: var(--gold); font-size: 4mm; font-family: "Segoe UI", sans-serif; }
+  /* bracket marking swapped kana (like ら|た) */
+  .br { display: inline-block; border-left: 0.35mm solid var(--gold); border-bottom: 0.35mm solid var(--gold); padding: 0 0.3mm 0 0.6mm; line-height: 1.05; }
+  .gap { display: inline-block; width: 13mm; }
+
+  /* 题目插图（原图原色，不跟墨水颜色） */
+  /* 占 A3 的第 13〜15 行（えらんで ください / 句子 / 选项），上下贴横线，不多占行。
+     隐藏笔记时紧跟在文字右边；显示笔记时让开「这里很吵」那条注释 */
+  .pic { position: absolute; top: calc(9.4mm * 13 + 0.9mm); height: calc(9.4mm * 3 - 1.5mm);
+         left: 134mm; width: 52mm; display: flex; align-items: center; justify-content: flex-start; }
+  .pic img { max-width: 100%; max-height: 100%; display: block; border-radius: 1.5mm; }
+  html:not(.clean) .pic { left: 158mm; width: 42mm; }
+
+  /* ---- 隐藏笔记 ---- */
+  .clean .note { visibility: hidden; }
+  .clean .x::after { content: none; }
+  .clean .br { border: 0; padding: 0; }
+  .clean .circ { border-color: transparent; width: auto; height: auto; border-radius: 0; color: var(--red);
+                 font-size: inherit; font-family: inherit; margin-right: 0.8mm; }
+  .clean .circ .dot { display: inline; }
+
+  /* 屏幕上看：页面居中 + 右上角切换按钮；打印/导出 PDF 时不显示 */
+  @media screen {
+    body { background: #d9dcdf; padding: 24px 0 48px; }
+    .page { margin: 0 auto; box-shadow: 0 4px 24px rgba(0,0,0,.18); }
+  }
+  .switch { position: fixed; top: 16px; right: 16px; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; z-index: 10;
+            font-family: "Microsoft YaHei", "Yu Gothic", sans-serif; }
+  .seg { display: flex; background: #fff; border-radius: 999px; padding: 4px; box-shadow: 0 2px 10px rgba(0,0,0,.15); }
+  .seg button { border: 0; background: transparent; font: inherit; font-size: 14px; padding: 8px 16px;
+                border-radius: 999px; cursor: pointer; color: #555; }
+  .seg button.on { background: #1f1f1f; color: #fff; }
+  @media print { .switch { display: none !important; } }
+
+  /* ---- Page002 起新增的记号 ---- */
+  ruby rt { font-size: 0.5em; }
+  .blank { display: inline-block; min-width: 9mm; margin: 0 1mm; border-bottom: 0.3mm solid var(--red); text-align: center; line-height: 1.05; }
+  .heart { color: var(--red); }
+  .qbox { display: inline-block; min-width: 9mm; padding: 0 1.4mm; border: 0.35mm solid var(--gold); text-align: center; line-height: 1.15; }
+  .ul { display: inline-block; border-bottom: 0.3mm solid var(--gold); line-height: 1.1; }
+  .tiny { font-size: 3.1mm; }
+  .wavyg { text-decoration: underline wavy var(--gold); text-decoration-thickness: 0.3mm; text-underline-offset: 1.2mm; }
+  .arc { display: inline-block; border-bottom: 0.35mm solid var(--gold); border-radius: 0 0 50% 50% / 0 0 2.2mm 2.2mm; padding-bottom: 0.4mm; line-height: 1.05; }
+  .mark { display: inline-block; text-align: center; font-family: "Segoe UI", sans-serif; }
+  /* 隐藏笔记：答案的 ♡ 填空号、圈号回到普通样子 */
+  .clean .qbox.note { visibility: hidden; }
+  /* ✓ 画在下一行（和 × 一样） */
+  .ok { position: relative; display: inline-block; }
+  .ok::after { content: "✓"; position: absolute; left: 50%; transform: translateX(-50%); top: 8.6mm; color: var(--gold); font-size: 4mm; font-family: "Segoe UI", sans-serif; }
+  .clean .ok::after { content: none; }
+  .clean .arc { border-color: transparent; }
+</style>
+</head>
+<body>
+<div class="switch">
+  <div class="seg">
+    <button data-t="photo">照片配色</button>
+    <button data-t="white">白底</button>
+  </div>
+  <div class="seg">
+    <button data-c="0">显示笔记</button>
+    <button data-c="1">隐藏笔记</button>
+  </div>
+</div>
+<script>
+  var view = { t: 'photo', c: '0' };
+  function apply() {
+    document.documentElement.className = 'theme-' + view.t + (view.c === '1' ? ' clean' : '');
+    document.title = 'Page 002 · ' + (view.t === 'white' ? '白底' : '照片配色') + (view.c === '1' ? ' · 隐藏笔记' : '');
+    document.querySelectorAll('.seg button').forEach(function (b) {
+      b.classList.toggle('on', b.dataset.t ? b.dataset.t === view.t : b.dataset.c === view.c);
+    });
+    var q = [];
+    if (view.t === 'photo') q.push('theme=photo');
+    if (view.c === '0') q.push('clean=0');
+    try { history.replaceState(null, '', location.pathname + (q.length ? '?' + q.join('&') : '')); } catch (e) {}
+  }
+  // 默认：白底 + 隐藏笔记（他 11-09 定）
+  var p = new URLSearchParams(location.search);
+  view.t = p.get('theme') === 'photo' ? 'photo' : 'white';
+  view.c = p.get('clean') === '0' ? '0' : '1';
+  apply();
+  document.querySelector('.switch').addEventListener('click', function (e) {
+    var b = e.target.closest('button'); if (!b) return;
+    if (b.dataset.t) view.t = b.dataset.t; else view.c = b.dataset.c;
+    apply();
+  });
+</script>
+<div class="page">
+  <div class="head">
+    <div class="title">Page 002:</div>
+    <div class="meta no">No.</div>
+    <div class="meta date">Date<span>..</span></div>
+  </div>
+
+  <div class="rows">
+    <div class="row in1 gold" style="padding-left:30mm">言語知識（文法）・読解：</div>
+
+    <!-- B1 -->
+    <div class="row gold" data-say="B1-i"><span class="nosay">B1：</span>（<span class="gap" style="width:4mm"></span>）に<span class="s"></span><ruby>何<rt>なに</rt></ruby>を<span class="s"></span><ruby>入<rt>い</rt></ruby>れますか。1・2・3・4から<span class="s"></span>いちばん<span class="s"></span>いい<span class="s"></span>ものを<span class="s"></span><ruby>一<rt>ひと</rt></ruby>つ</div>
+    <div class="row gold" data-say="B1-i">えらんで<span class="s"></span>ください。</div>
+    <div class="row in1" style="padding-left:30mm" data-say="B1-s"><span class="red"><ruby>弟<rt>おとうと</rt></ruby>は<span class="s"></span>へや<span class="arc">（<span class="gap" style="width:5mm"></span>）そうじを</span><span class="s"></span>しました。</span><span class="s"></span><span class="gold zh note">［弟弟打扫了房间］</span></div>
+    <div class="row red" style="padding-left:30mm">
+      <span class="opt" data-say="B1-o1"><span class="num">1.</span><span class="x">が</span></span>
+      <span class="opt" data-say="B1-o2"><span class="num">2.</span><span class="x">を</span></span>
+      <span class="opt" data-say="B1-o3"><span class="num">3.</span>に</span>
+      <span class="opt" data-say="B1-o4"><span class="circ">4<span class="dot">.</span></span>の</span>
+    </div>
+    <div class="row gold zh" style="padding-left:61mm"><span class="note">×↳表方向，地点。</span></div>
+    <div class="row"></div>
+
+    <!-- B2 -->
+    <div class="row gold" data-say="B2-i"><span class="nosay">B2：</span><span class="under">＿♡＿</span>に<span class="s"></span><ruby data-yomi="ハイ">入<rt>はい</rt></ruby>る<span class="s"></span>ものは<span class="s"></span>どれですか。1・2・3・4から<span class="s"></span>いちばん<span class="s"></span>いい<span class="s"></span>ものを<span class="s"></span><ruby>一<rt>ひと</rt></ruby>つ</div>
+    <div class="row gold" data-say="B2-i">えらんで<span class="s"></span>ください。<span class="note zh tiny" style="margin-left:22mm">主语<span class="s"></span>地点で<span class="s"></span>动词</span></div>
+    <div class="row in1" data-say="B2-s"><span class="red">これは<span class="s"></span>きょねん<span class="s"></span>わたし<span class="blank"><span class="note gold">1</span></span><span class="blank"><span class="note gold">4</span></span><span class="blank"><span class="heart">♡</span></span><span class="blank"><span class="note gold">3</span></span>しゃしんです。</span><span class="gold zh note">［这是我去年在海边拍</span></div>
+    <div class="row red" style="padding-left:26mm">
+      <span class="opt" data-say="B2-o1"><span class="note gold">×</span><span class="num">1.</span>が</span>
+      <span class="opt" data-say="B2-o2"><span class="circ">2<span class="dot">.</span></span>で</span>
+      <span class="opt" data-say="B2-o3"><span class="note gold">×</span><span class="num">3.</span>とった</span>
+      <span class="opt" data-say="B2-o4"><span class="note gold">×</span><span class="num">4.</span><ruby>海<rt>うみ</rt></ruby></span>
+      <span class="gold zh note" style="margin-left:26mm">的照片］</span>
+    </div>
+    <div class="row gold in1"><span class="note">＊〈もんだいれい〉：きのう、<span class="blank" style="border-color:var(--gold)"></span><span class="blank" style="border-color:var(--gold)"></span><span class="blank" style="border-color:var(--gold)"><span class="heart">♡</span></span><span class="blank" style="border-color:var(--gold)"></span>。</span></div>
+    <div class="row gold" style="padding-left:30mm"><span class="note"><span class="opt">1.じしょを</span><span class="opt">2.<ruby>日本語<rt>にほんご</rt></ruby>の</span><span class="opt">3.<ruby>行<rt>い</rt></ruby>きました。</span><span class="opt">4.<ruby>買<rt>か</rt></ruby>いに</span></span></div>
+    <div class="row gold" style="padding-left:30mm"><span class="note">〈かいとうのしかた〉きのう、<span class="ul"><ruby>日本語<rt>にほんご</rt></ruby>の</span><span class="s"></span><span class="ul">じしょを</span><span class="s"></span><span class="ul"><ruby>買<rt>か</rt></ruby>いに</span><span class="s"></span><span class="ul"><ruby>行<rt>い</rt></ruby>きました。</span></span></div>
+    <div class="row gold" style="padding-left:30mm"><span class="note"><span class="opt">1.じしょを</span><span class="opt">2.<ruby>日本語<rt>にほんご</rt></ruby>の</span><span class="opt">3.<ruby>行<rt>い</rt></ruby>きました。</span><span class="opt">4.<ruby>買<rt>か</rt></ruby>いに</span></span></div>
+    <div class="row gold in1"><span class="note">＊〈<ruby>注意<rt>ちゅうい</rt></ruby>〉<ruby>文<rt>ぶん</rt></ruby>の<ruby>途中<rt>とちゅう</rt></ruby>に。はありません。</span></div>
+    <div class="row gold" style="padding-left:30mm"><span class="note"><span class="x"><ruby>正<rt>ただ</rt></ruby>しくない</span><span class="gap" style="width:12mm"></span>きのう、<ruby>行<rt>い</rt></ruby>きました<span class="s"></span><ruby>日本語<rt>にほんご</rt></ruby>の<span class="s"></span>じしょを<span class="s"></span><ruby>買<rt>か</rt></ruby>いに。</span></div>
+    <div class="row gold" style="position:relative"><span class="note heart" style="position:absolute;left:87.6mm;bottom:1.3mm">♡<span class="tiny">↑</span></span></div>
+    <div class="row gold in1"><span class="note">♡<span class="s"></span>これは<span class="s"></span>きょねん<span class="s"></span>わたし<span class="wavyg">が</span><span class="s"></span><span class="wavyg"><ruby>海<rt>うみ</rt></ruby></span><span class="wavyg">で</span><span class="s"></span><span class="wavyg">とった</span>しゃしんです。<span class="zh">（正确语序）</span>.</span></div>
+    <div class="row gold" style="position:relative">
+      <span class="note mark" style="position:absolute;left:77.6mm;bottom:1.3mm;width:3mm">1</span>
+      <span class="note mark" style="position:absolute;left:84.2mm;bottom:1.3mm;width:3mm">4</span>
+      <span class="note mark" style="position:absolute;left:88.0mm;bottom:1.3mm;width:3mm">2</span>
+      <span class="note mark" style="position:absolute;left:99.2mm;bottom:1.3mm;width:3mm">3</span>
+    </div>
+    <div class="row"></div>
+
+    <!-- B3（文章跨到 Page003） -->
+    <div class="row gold" data-say="B3-i"><span class="nosay">B3：</span><span class="qbox">□</span>に<span class="s"></span><ruby>何<rt>なに</rt></ruby>を<span class="s"></span><ruby>入<rt>い</rt></ruby>れますか。ぶんしょうの<span class="s"></span>いみを<span class="s"></span>かんがえて、1・2・3・4</div>
+    <div class="row gold" data-say="B3-i">から<span class="s"></span>いちばん<span class="s"></span>いい<span class="s"></span>ものを<span class="s"></span><ruby>一<rt>ひと</rt></ruby>つ<span class="s"></span>えらんで<span class="s"></span>ください。</div>
+    <div class="row red in1" style="padding-left:30mm" data-say="B3-p0">ジョンさんと<span class="s"></span>ヤンさんは<span class="s"></span>あした<span class="s"></span>じこしょうかいを<span class="s"></span>します。<ruby>二人<rt>ふたり</rt></ruby>は<span class="s"></span>じこ</div>
+    <div class="row red" data-say="B3-p0">しょうかいの<span class="s"></span>ぶんしょうを<span class="s"></span><ruby>書<rt>か</rt></ruby>きました。</div>
+    <div class="row red in1">（1）</div>
+    <div class="row red in1" data-say="B3-p1">はじめまして。ジョン・スミスです。アメリカから<span class="s"></span><ruby>来<rt>き</rt></ruby>ました。</div>
+  </div>
+</div>
+<script src="audio/manifest.js"></script>
+<script src="../_shared/say.js"></script>
+</body>
+</html>

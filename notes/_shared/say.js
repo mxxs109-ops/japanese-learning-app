@@ -35,7 +35,8 @@
     }
     segs.forEach(function (s) {
       s.chunks.forEach(function (c) {
-        c.say = c.sayAs ? c.sayAs : c.num ? (NUM[c.text.replace(/[^0-9]/g, '')] || c.text) + '、' : c.text.replace(/[＿_]/g, '');
+        // 念的文字 = c.alt（带注音的汉字换成注音，比如 <ruby>今<rt>いま</rt></ruby> 念 いま）；高亮仍按页面上的汉字
+        c.say = c.sayAs ? c.sayAs : c.num ? (NUM[c.text.replace(/[^0-9]/g, '')] || c.text) + '、' : c.alt.replace(/[＿_]/g, '');
         // 「1・2・3・4」引擎会念成「いってん、に、さんてん…」（・当小数点），改成 いち、に、さん、よん
         c.say = c.say.replace(/[0-9](?:・[0-9])+/g, function (m) {
           return m.split('・').map(function (d) { return NUM[d] || d; }).join('、');
@@ -45,7 +46,7 @@
     return segs;
   }
   function newChunk(seg, num) {
-    seg.cur = { text: '', pieces: [], num: !!num, join: !!seg.joinNext };
+    seg.cur = { text: '', alt: '', pieces: [], num: !!num, join: !!seg.joinNext };
     seg.joinNext = false;
     return seg.cur;
   }
@@ -55,16 +56,33 @@
     var prev = seg.chunks[seg.chunks.length - 1];
     // 只有标点（（ ）。・）的不单独成词，并到前一个词里
     if (!c.sayAs && !LETTER.test(c.text) && prev && !prev.num) {
-      prev.text += c.text; prev.pieces = prev.pieces.concat(c.pieces); return;
+      prev.text += c.text; prev.alt += c.alt; prev.pieces = prev.pieces.concat(c.pieces); return;
     }
     seg.chunks.push(c);
   }
-  function addChar(seg, node, k, ch) {
+  function addChar(seg, node, k, ch, noAlt) {
     var c = seg.cur || newChunk(seg);
     var last = c.pieces[c.pieces.length - 1];
     if (last && last[0] === node && last[2] === k) last[2] = k + 1;
     else c.pieces.push([node, k, k + 1]);
     c.text += ch;
+    if (!noAlt) c.alt += ch;
+  }
+  // <ruby>漢字<rt>かな</rt></ruby>：高亮标在汉字上，念的时候用注音
+  function walkRuby(rb, seg) {
+    // data-yomi = 只给朗读用的读法（引擎把注音念错时用，比如「はいる」被当成助词「は」+「いる」→ 写 data-yomi="ハイ"）
+    var rt = rb.querySelector('rt');
+    var reading = rb.getAttribute('data-yomi') || (rt ? rt.textContent.replace(/\s/g, '') : '');
+    var any = false;
+    for (var ch = rb.firstChild; ch; ch = ch.nextSibling) {
+      if (ch.nodeType !== 3) continue;
+      var s = ch.nodeValue;
+      for (var k = 0; k < s.length; k++) {
+        if (/\s/.test(s[k])) continue;
+        addChar(seg, ch, k, s[k], !!reading); any = true;
+      }
+    }
+    if (any && reading) seg.cur.alt += reading;
   }
   function walk(node, seg) {
     for (var ch = node.firstChild; ch; ch = ch.nextSibling) {
@@ -81,6 +99,7 @@
         // ＿＿ 下划线：念成「かせん」（下線），高亮时照样标出这段下划线
         if (hasClass(ch, ['under'])) { close(seg); newChunk(seg).sayAs = 'かせん'; walk(ch, seg); close(seg); continue; }
         if (ch.tagName === 'RT' || ch.tagName === 'RP' || hasClass(ch, SKIP_CLASS)) continue;
+        if (ch.tagName === 'RUBY') { walkRuby(ch, seg); continue; }
         if (hasClass(ch, ['s', 'gap'])) { close(seg); continue; }
         if (hasClass(ch, ['num', 'circ'])) { close(seg); newChunk(seg, true); walk(ch, seg); close(seg); continue; }
         if (hasClass(ch, ['opt'])) { close(seg); walk(ch, seg); close(seg); continue; }
