@@ -134,6 +134,7 @@
 
   function load(key, fallback) { try { var v = localStorage.getItem('say-' + key); return v == null ? fallback : v; } catch (e) { return fallback; } }
   function keep(key, v) { try { localStorage.setItem('say-' + key, v); } catch (e) {} }
+  var POS_KEY = 'pos-' + location.pathname;      // 单页直接打开时，读到第几段（每页分开记）
 
   function voiceId() { return ui.voice ? ui.voice.value : ''; }
   function voiceName() {
@@ -182,10 +183,13 @@
     if (i >= PLAN.length) {
       var chain = st.playing && !st.single;
       stop();
+      if (chain && !EMBED) keep(POS_KEY, '');   // 整页读完：下次从头
+
       if (chain) tell({ say: 'done' });       // 整页读完 → 书翻到下一页接着读
       return;
     }
     st.seg = i; st.chunk = -1; st.playing = true;
+    if (!EMBED) keep(POS_KEY, String(i));     // 单页直接打开时：记住读到第几段（书里由 book.html 记）
     var first = PLAN[i].els[0];
     var r = first.getBoundingClientRect();
     if (r.top < 60 || r.bottom > window.innerHeight - 60) first.scrollIntoView({ block: 'center', behavior: 'smooth' });
@@ -205,17 +209,18 @@
     st.playing = false; st.seg = -1; st.chunk = -1; st.single = false;
     audio.pause(); paint(); refresh();
   }
+  function savedPos() { var v = Number(load(POS_KEY, '')); return v > 0 && v < PLAN.length ? v : 0; }
   function togglePause() {
-    if (st.seg < 0) { st.single = false; playSeg(0); return; }
+    if (st.seg < 0) { st.single = false; playSeg(EMBED ? 0 : savedPos()); return; }   // 单页：接着上次读到的那段
     if (st.playing) { st.playing = false; audio.pause(); }
     else { st.playing = true; audio.play().catch(function () {}); if (!st.raf) st.raf = requestAnimationFrame(tick); }
     refresh();
   }
   function refresh() {
-    tell({ say: 'state', playing: st.playing, active: st.seg >= 0, hasAudio: !!DATA,
+    tell({ say: 'state', playing: st.playing, active: st.seg >= 0, seg: st.seg, nseg: PLAN.length, hasAudio: !!DATA,
            voices: DATA ? DATA.voices : [], voice: voiceId(), credit: DATA ? 'VOICEVOX:' + voiceName() : '' });
     if (!ui.play) return;
-    ui.play.textContent = st.playing ? '⏸ 暂停' : (st.seg >= 0 ? '▶ 继续' : '▶ 全部朗读');
+    ui.play.textContent = st.playing ? '⏸ 暂停' : (st.seg >= 0 ? '▶ 继续' : (!EMBED && savedPos() ? '▶ 接着上次读' : '▶ 全部朗读'));
     ui.stop.disabled = st.seg < 0;
     ui.credit.textContent = DATA ? '音声：VOICEVOX:' + voiceName() : '还没有生成语音（tools/make_notes_audio.py）';
   }
@@ -266,11 +271,11 @@
       refresh();
     };
     ui.speed.onchange = function () { keep('speed', ui.speed.value); audio.playbackRate = Number(ui.speed.value) || 1; };
-    // 点页面上任何一段要读的文字：只读这一段
+    // 点页面上任何一段要读的文字：从这一段开始一直往下读（11-12 他要「点哪句就从哪句往下读」；以前是只读这一段）
     PLAN.forEach(function (s, i) {
       s.els.forEach(function (el) {
         el.classList.add('say-able');
-        el.addEventListener('click', function () { if (!DATA) return; playSeg(i); st.single = true; });
+        el.addEventListener('click', function () { if (!DATA) return; st.single = false; playSeg(i); });
       });
     });
     refresh();
@@ -298,7 +303,7 @@
       var m = e.data || {};
       if (m.say === 'theme') click('.switch button[data-t="' + m.v + '"]');
       else if (m.say === 'clean') click('.switch button[data-c="' + m.v + '"]');
-      else if (m.say === 'play') { st.single = false; playSeg(0); }
+      else if (m.say === 'play') { st.single = false; playSeg(Number(m.from) > 0 ? Number(m.from) : 0); }   // from = 从第几段开始（接着上次读）
       else if (m.say === 'toggle') togglePause();
       else if (m.say === 'stop') stop();
       else if (m.say === 'voice' && ui.voice && ui.voice.querySelector('option[value="' + m.v + '"]')) { ui.voice.value = m.v; ui.voice.onchange(); }

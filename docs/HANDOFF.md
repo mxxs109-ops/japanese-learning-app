@@ -172,6 +172,8 @@ notes/
 - 朗读按注音念（say.js 读 ruby 的 rt）；引擎念错时 `<ruby data-yomi="カタカナ">`：入（はい）る → ハイ；句号「。」当符号念 → `<ruby data-yomi="まる">。<rt></rt></ruby>`。
   改完必看 audio/kana.txt。
 - 🔴 他开着 PDF 查看器时 make_notes_pdf.py 会在「删旧 PDF」那步失败（WinError 32）→ 请他关 PDF，或在临时目录生成后覆盖拷回（覆盖写不会被拦）。
+- 朗读交互（11-12）：点一句 = 从这句往下读；书记住读到哪（book-resume），按钮「▶ 接着上次读（P00N）」；任何时候只有一页在响（hushOthers）。
+  改 say.js / book.html 后要同步到黄金眼合并本（它的 book.html 是改过的副本，函数要逐段照搬，**别漏 readFrom 上面的 resumeGet / resumeSet / hushOthers**）
 - 黄金眼：11-12 他（另一个会话）把 p001〜p003 合成一本 `jp-n5-kaisetsu-all`；以后更新黄金眼 = 把 Daily 的 PageNNN 同步进 all 那本，见黄金眼 WORKLOG。
 
 ### 待他定 / 没做完

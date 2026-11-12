@@ -273,28 +273,45 @@
   var reading = { on: false, frame: -1, paused: false, waitFlip: false, queue: [] };
   var states = {};                                // 每页最近一次报来的状态
 
-  function readFrom(list) {                       // 依次读 list 里的书页；读完翻页继续
-    reading.queue = list.filter(function (k) { return frames[k]; });
-    next();
+  // ---- 读到哪了（2026-11-12 他要「从上次读的地方继续」）：存 { k: 书页序号, seg: 第几段 }，关了再开也在 ----
+  function resumeGet() {
+    try { var r = JSON.parse(load('resume', '') || 'null'); if (r && frames[r.k] && r.seg >= 0) return r; } catch (e) {}
+    return null;
   }
-  function next() {
+  function resumeSet(k, seg) { keep('resume', k == null ? '' : JSON.stringify({ k: k, seg: seg })); }
+  // 只能有一个声音：除了 k 以外的页全部停掉
+  function hushOthers(k) { frames.forEach(function (f, j) { if (f && j !== k) send(f, { say: 'stop' }); }); }
+
+  function readFrom(list, from) {                 // 依次读 list 里的书页；读完翻页继续。from = 第一页从第几段开始
+    reading.queue = list.filter(function (k) { return frames[k]; });
+    next(from);
+  }
+  function next(from) {
     if (!reading.on) return;
     if (reading.queue.length) {
       reading.frame = reading.queue.shift();
+      hushOthers(reading.frame);
       send(frames[reading.frame], { say: 'voice', v: voiceSel.value });
       send(frames[reading.frame], { say: 'speed', v: speedSel.value });
-      send(frames[reading.frame], { say: 'play' });
+      send(frames[reading.frame], { say: 'play', from: from || 0 });
       return;
     }
     var vis = visible(), last = vis[vis.length - 1];
     var more = frames.slice(last + 1).some(function (f) { return f; });
     if (more) { reading.waitFlip = true; flip.flipNext('bottom'); }
-    else stopAll();
+    else { resumeSet(null); stopAll(); }          // 整本读完：下次从头
   }
   function stopAll() { reading.on = false; reading.paused = false; reading.frame = -1; reading.waitFlip = false; all({ say: 'stop' }); ui(); }
   function togglePlay() {
     if (!reading.on) {
-      var vis = visible();
+      var vis = visible(), r = resumeGet();
+      if (r) {                                    // 有上次的位置：翻到那一页，从那一段接着读
+        reading.on = true; reading.paused = false;
+        var go = function () { var v = visible(); readFrom(v.slice(v.indexOf(r.k)), r.seg); ui(); };
+        if (vis.indexOf(r.k) >= 0) go();
+        else { flip.turnToPage(r.k); label(); setTimeout(function () { place(); go(); }, 400); }
+        ui(); return;
+      }
       if (!vis.some(function (k) { return frames[k]; })) {   // 在封面上按朗读：先翻开
         reading.on = true; reading.waitFlip = true; flip.flipNext('bottom'); ui(); return;
       }
@@ -308,7 +325,9 @@
   speedSel.onchange = function () { keep('speed', speedSel.value); all({ say: 'speed', v: speedSel.value }); };
 
   function ui() {
-    playBtn.textContent = !reading.on ? '▶ 全部朗读' : reading.paused ? '▶ 继续' : '⏸ 暂停';
+    var r = !reading.on && resumeGet();
+    playBtn.textContent = !reading.on ? (r ? '▶ 接着上次读（' + frames[r.k].title.replace('Page', 'P') + '）' : '▶ 全部朗读')
+      : reading.paused ? '▶ 继续' : '⏸ 暂停';
     stopBtn.disabled = !reading.on && !Object.keys(states).some(function (k) { return states[k].active; });
     var name = voiceSel.options[voiceSel.selectedIndex];
     credit.textContent = name ? '音声：VOICEVOX:' + name.textContent : '';
@@ -318,6 +337,17 @@
     if (k < 0) return;
     if (m.say === 'state') {
       states[k] = m;
+      if (m.playing && m.seg >= 0) {
+        resumeSet(k, m.seg);                     // 随时记下读到哪一段
+        reading.paused = false;
+        if (!reading.on || reading.frame !== k) {
+          // 点了某一句开始读（或在另一页上点了句子）：从这里往下读、读完翻页；别的页立刻停，只留一个声音
+          hushOthers(k);
+          var vis = visible();
+          reading.on = true; reading.paused = false; reading.waitFlip = false;
+          reading.frame = k; reading.queue = vis.slice(vis.indexOf(k) + 1).filter(function (j) { return frames[j]; });
+        }
+      }
       if (!voiceSel.options.length && m.voices && m.voices.length) {    // 音色列表从第一页拿
         m.voices.forEach(function (v) { var o = document.createElement('option'); o.value = v.id; o.textContent = v.name; voiceSel.appendChild(o); });
         var saved = load('voice', m.voice);
