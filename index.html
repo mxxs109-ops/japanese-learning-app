@@ -109,6 +109,8 @@
   .instr { font-size: 13px; color: var(--muted); line-height: 1.9; margin: 0 0 28px; }
   .sentence { font-size: 26px; text-align: center; margin: 8px 0 34px; line-height: 1.7; word-break: keep-all; overflow-wrap: anywhere; }
   .sentence u { text-decoration: none; border-bottom: 2px solid var(--ink); padding: 0 2px; }
+  /* 对话题（sentence 里有 \n，如 A「…」\nB「…」）：照原题分行、左对齐，整块居中（2026-11-16，APP_VERSION 23） */
+  .sentence.dlg { white-space: pre-line; text-align: left; width: fit-content; max-width: 100%; margin-left: auto; margin-right: auto; }
   /* 文章题（layout: 'passage'）：整篇文章全部展开，不做滚动框；□ = 红框空格 */
   .passage { font-size: 17px; line-height: 2.4; text-align: left; white-space: pre-wrap; margin: 0 0 30px;
     padding: 14px 20px; border: 1px solid #ddd8ce; border-radius: 12px; background: #fff; overflow-wrap: anywhere; }
@@ -299,7 +301,7 @@
   var STORE_KEY = 'jp-daily-v1';
   var REMOTE_KEY = 'jp-daily-remote-v1';
   // 改了 index.html / srs.js / install.bat 就把这个数 +1，并把 version.txt 改成同一个数
-  var APP_VERSION = 22;
+  var APP_VERSION = 23;
   var GH_API = 'https://api.github.com/repos/mxxs109-ops/japanese-learning-app/contents/';
   var INSTALL_CMD = 'curl -sL -o "%TEMP%\\jla.bat" https://raw.githubusercontent.com/mxxs109-ops/japanese-learning-app/main/install.bat && "%TEMP%\\jla.bat"';
 
@@ -755,7 +757,7 @@
       '<span class="progress">第 ' + (no + 1) + ' 题 / 共 ' + s.queue.length + ' 题</span></div>' +
       (isListen(q) ? listenHTML(q) : isPassage(q) ? passageHTML(q, ans)
         : '<p class="instr">' + sentenceHTML(tText(q, 'instruction')) + '</p>' +
-          '<div class="sentence">' + sentenceHTML(tText(q, 'sentence')) + '</div>' + imageHTML(q)) +
+          '<div class="sentence' + (/\n/.test(q.sentence) ? ' dlg' : '') + '">' + sentenceHTML(tText(q, 'sentence')) + '</div>' + imageHTML(q)) +
       '<div class="opts' + (q.options.some(function (o) { return String(o).length > 10; }) ? ' long' : '') + '">';
     q.options.forEach(function (o, i) {
       var cls = ans == null ? '' : i === q.answer ? ' ok' : (i === ans ? ' bad' : ' dim');
@@ -847,7 +849,7 @@
       (orig || (isListen(q) ? listenHTML(q) : isPassage(q)
         ? passageHTML(q, ans)
         : '<p class="instr">' + sentenceHTML(tText(q, 'instruction')) + '</p>' +
-          '<div class="sentence">' + sentenceHTML(tText(q, 'sentence')) + '</div>' + imageHTML(q))) +
+          '<div class="sentence' + (/\n/.test(q.sentence) ? ' dlg' : '') + '">' + sentenceHTML(tText(q, 'sentence')) + '</div>' + imageHTML(q))) +
       '<div class="opts' + (q.options.some(function (o) { return String(o).length > 10; }) ? ' long' : '') + '">';
     q.options.forEach(function (o, i) {
       var cls = '';
