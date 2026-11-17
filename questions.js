@@ -796,7 +796,8 @@ window.PAST_RESULTS = [
   { id: 'n5-bunpou1-heyano',   date: '2026-11-12', choice: 1 },  // 11-12 辐射蓝要求加入错题集（实际选了哪个没说，记成错选 2 を）
   { id: 'n4-moji5-juusho',      date: '2026-11-16', choice: 2 },  // 选 3 → 对（11-16 辐射蓝：今天只有第一道对了）
   { id: 'n4-bunpou1-ochite',    date: '2026-11-16', choice: 1 },  // 11-16 辐射蓝要求进错题集（实际选了哪个没说，记成错选 2 おちて　いません）
-  { id: 'n4-bunpou2-hikerushi', date: '2026-11-16', choice: 1 }   // 同上（记成错选 2 ギターも）
+  { id: 'n4-bunpou2-hikerushi', date: '2026-11-16', choice: 1 },  // 同上（记成错选 2 ギターも）
+  { id: 'n4-bunpou3-wa',        date: '2026-11-17', choice: 1 }   // 11-17 辐射蓝：朋友做错了（选了哪个没说，记成错选 2 が）
 ];
 
 // 教学模式（右上角「注音」开关）用的注音版，按题目 id 写；没写的部分显示原文。
